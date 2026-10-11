@@ -1,0 +1,41 @@
+MERKBUCH ALS APP ÜBER GITHUB PAGES
+==================================
+
+In diesem Ordner liegen sechs Dateien, die zusammen die App sind:
+  index.html              die App selbst
+  manifest.webmanifest    Name, Farbe und Symbol für die Installation
+  sw.js                   sorgt dafür, dass die App offline läuft und Updates holt
+  icon-192.png, icon-512.png, icon-maskable-512.png   App-Symbole
+(Diese Datei LIESMICH.txt muss nicht hochgeladen werden.)
+
+EINMALIG EINRICHTEN (am besten am PC)
+1. Auf github.com ein kostenloses Konto anlegen.
+2. Neues Repository anlegen: Name z. B. "merkbuch", Sichtbarkeit "Public".
+3. Im leeren Repository "uploading an existing file" wählen, die sechs Dateien
+   hineinziehen und mit "Commit changes" bestätigen.
+4. Settings -> Pages -> bei "Source" "Deploy from a branch" wählen,
+   Branch "main" und Ordner "/ (root)" einstellen, "Save".
+5. Nach ein bis zwei Minuten ist die App erreichbar unter
+   https://DEIN-BENUTZERNAME.github.io/merkbuch/
+
+AUFS HANDY BRINGEN
+6. Die Adresse auf dem Handy in Chrome öffnen.
+7. Menü (drei Punkte) -> "App installieren" bzw. "Zum Startbildschirm hinzufügen".
+8. Daten aus der bisherigen Fassung holen: dort Einstellungen -> "Backup speichern",
+   in der neuen App Einstellungen -> "Datei laden".
+
+UPDATE EINSPIELEN
+1. Im Repository "Add file" -> "Upload files", die neue index.html hineinziehen
+   (sie ersetzt die alte), "Commit changes".
+2. Nach ein bis zwei Minuten die App am Handy mit Internet öffnen. Sie lädt die
+   neue Fassung von selbst; notfalls einmal schließen und wieder öffnen.
+3. Kontrolle: Ganz unten in den Einstellungen steht die Versionsangabe.
+
+WAS MIT DEN DATEN PASSIERT
+- Die Daten liegen nur auf dem Handy, im Speicher des Browsers für diese Adresse.
+  Ein Update tauscht nur das Programm aus, die Daten bleiben.
+- Die Daten gehen verloren, wenn die Website-Daten bzw. App-Daten gelöscht werden,
+  beim Handywechsel, oder wenn sich die Adresse ändert (Repository oder
+  GitHub-Benutzername umbenannt).
+- Deshalb: vor einem Update und sonst regelmäßig ein Backup speichern oder über
+  "Backup teilen" z. B. in Google Drive ablegen.

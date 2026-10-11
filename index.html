@@ -1,0 +1,2885 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Merkbuch</title>
+<meta name="theme-color" content="#A8275F">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F0F7; --surface:#FFFFFF; --ink:#241A2E; --muted:#6B6078; --line:#DDD7E6;
+  --accent:#A8275F; --accent-ink:#FFFFFF; --chip:#E9E4F1; --warn:#8A5A00; --warn-bg:#FFF1CC;
+  --display:"Bricolage Grotesque","Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#17121D; --surface:#221A2B; --ink:#EFE9F5; --muted:#A99DB8; --line:#3A2F47;
+    --accent:#F07AA8; --accent-ink:#2A0F1C; --chip:#30263C; --warn:#FFD98A; --warn-bg:#3D2F10;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17121D; --surface:#221A2B; --ink:#EFE9F5; --muted:#A99DB8; --line:#3A2F47;
+  --accent:#F07AA8; --accent-ink:#2A0F1C; --chip:#30263C; --warn:#FFD98A; --warn-bg:#3D2F10;
+}
+*,*::before,*::after{box-sizing:inherit}
+details > *{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.app{max-width:640px;margin:0 auto;padding:20px 16px 160px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;line-height:1.1;margin:4px 0 16px;letter-spacing:-0.01em}
+h2{font-family:var(--display);font-weight:700;font-size:1.25rem;margin:28px 0 10px}
+h3{font-family:var(--display);font-weight:500;font-size:1.1rem;margin:0 0 8px}
+p{margin:0 0 12px}
+.muted{color:var(--muted)}
+.small{font-size:.9rem}
+
+.field{width:100%;min-height:48px;padding:11px 14px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px}
+textarea.field{display:block;resize:none;overflow:hidden;min-height:48px}
+select.field{appearance:auto}
+.row{display:flex;gap:8px;align-items:stretch}
+.row > .field{flex:1;min-width:0}
+
+.btn{min-height:48px;padding:10px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--accent);padding:10px 8px}
+.btn.danger{color:#C0263B;background:transparent}
+:root[data-theme="dark"] .btn.danger{color:#FF8A98}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.danger{color:#FF8A98}}
+.btn.icon{width:48px;padding:0;flex:none}
+.btn:disabled{opacity:.4;cursor:default}
+
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+
+/* Personenliste */
+.people{list-style:none;margin:16px 0 0;padding:0}
+.person{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;cursor:pointer}
+.avatar{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:700;font-size:1.2rem}
+img.avatar{object-fit:cover;display:block}
+.avatar.big{width:64px;height:64px;font-size:1.7rem}
+.personhead{align-items:center;gap:12px;margin-bottom:6px}
+.personhead .namefield{margin-bottom:0}
+.photobtn{flex:none;padding:0;border:0;border-radius:50%;background:none;cursor:pointer}
+.photopreview{display:flex;justify-content:center;margin-bottom:16px}
+.photopreview .avatar{width:120px;height:120px;font-size:3rem}
+dialog .stack{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+dialog .stack .btn{white-space:normal}
+.person .name{font-weight:600;display:block;overflow-wrap:anywhere}
+.person .meta{display:block;color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+.person .hit b{color:var(--ink);font-weight:600}
+.empty{border:1.5px dashed var(--line);border-radius:16px;padding:22px 16px;color:var(--muted);text-align:center;margin-top:16px}
+
+/* Chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.chip{min-height:40px;padding:6px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--chip);cursor:pointer;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip[aria-pressed="true"]::before{content:"✓ "}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--chip);font-size:.9rem;font-weight:500;margin:0 6px 6px 0}
+
+/* Detail */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin:-6px -8px 6px}
+.namefield{font-family:var(--display);font-weight:700;font-size:1.6rem;margin-bottom:6px}
+
+/* Vergleich */
+.result{padding:12px 0;border-top:1.5px solid var(--line)}
+.result:first-child{border-top:0;padding-top:0}
+.cmphead{font-family:var(--display);font-weight:700;font-size:1.1rem;margin:22px 0 8px;overflow-wrap:anywhere}
+.btn.icon{display:inline-grid;place-items:center}
+.catcard{padding:10px}
+.catcard > .row .field{min-height:44px;padding:8px 12px}
+.catcard > .row .btn.icon{width:44px;min-height:44px}
+.catcard.off{background:transparent;border-style:dashed}
+.catcard.off > .row > .field{color:var(--muted);text-decoration:line-through;background:transparent}
+.morebtn{min-height:36px;margin:4px 0 0 -4px;padding:4px 8px;font-size:.9rem}
+.catbody{margin-top:8px}
+.catcard{-webkit-touch-callout:none}
+.catcard.dragging{position:relative;z-index:3;border-color:var(--accent);box-shadow:0 10px 26px rgba(20,10,30,.32)}
+body.sorting{-webkit-user-select:none;user-select:none}
+.catline{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.addslot{margin:14px 0 4px}
+.fab{position:fixed;right:max(16px,calc(50% - 304px));bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;
+  width:56px;height:56px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px rgba(20,10,30,.3)}
+.fab svg{width:26px;height:26px}
+.vcard{margin-top:10px}
+.extrarow{display:flex;gap:6px;margin-bottom:12px}
+.extrarow .field{min-width:0;margin-bottom:0}
+.extrarow .lab{flex:2}
+.extrarow .val{flex:3}
+.extrarow .btn{flex:none;width:44px;min-height:44px}
+.addfield{min-height:40px;width:44px;margin:-4px 0 0 -8px;font-size:1.3rem;line-height:1}
+.maplink{display:inline-block;margin:-4px 0 12px;min-height:32px;color:var(--accent);font-weight:600;font-size:.95rem}
+.lock{max-width:320px;margin:16vh auto 0;text-align:center}
+.lock .field{margin-bottom:12px;text-align:center;font-size:1.4rem;letter-spacing:.3em}
+.lock .btn{width:100%;margin-top:8px;white-space:normal}
+.lock form .btn{margin-top:0}
+.recopt{border-top:1.5px solid var(--line);padding:12px 0}
+.recopt strong{display:block;margin-bottom:2px}
+.recopt .state{display:block;margin-bottom:8px;font-size:.9rem;color:var(--muted)}
+.recopt .row{flex-wrap:wrap}
+.codebox{margin:0 0 14px;padding:14px 10px;border-radius:12px;background:var(--chip);text-align:center;font-size:1.3rem;font-weight:700;letter-spacing:.08em;overflow-wrap:anywhere}
+.hintbox{padding:10px 12px;border-radius:12px;background:var(--chip)}
+.fold label{display:block;font-weight:600;font-size:.9rem;margin:0 0 6px}
+.fold .field{margin-bottom:12px}
+/* Abschnitte der Einstellungen als Karten wie in der Personenliste: Titel, darunter die Kurzfassung, rechts der Pfeil */
+.setcard{padding:0;overflow:hidden;margin-bottom:10px}
+.setcard > h2{margin:0;font-size:1.1rem;font-weight:500}
+.h2btn{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:2px;width:100%;min-height:60px;padding:12px 14px;border:0;background:none;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.h2btn > span:first-child{grid-column:2;grid-row:1 / span 2;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--chip);color:var(--accent);font-size:.8rem}
+.h2btn > span:nth-child(2){grid-column:1;grid-row:1}
+.h2btn .now{grid-column:1;grid-row:2;font-family:var(--body);font-weight:400;font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+.h2btn .now:empty{display:none}
+.h2btn[aria-expanded="true"] > span:first-child{background:var(--accent);color:var(--accent-ink)}
+.setcard > h2 + div{padding:14px;border-top:1.5px solid var(--line)}
+.setcard .catcard{background:var(--bg);border-color:transparent}
+.setcard .catcard.off{background:transparent;border:1.5px dashed var(--line)}
+.setcard .recopt:last-child{padding-bottom:0}
+.swatch{display:inline-block;width:14px;height:14px;margin-right:8px;border-radius:50%;vertical-align:-2px;border:1.5px solid rgba(255,255,255,.75)}
+.chipnote{align-self:center}
+.chip.morechip{min-width:44px;background:transparent;border-style:dashed;color:var(--accent);font-weight:700}
+.cmpsearch{margin-bottom:10px}
+.vcard h3{margin-bottom:14px}
+.personhead .btn.icon{display:grid;place-items:center}
+.personhead .btn[aria-expanded="true"]{background:var(--chip)}
+.actions.end{justify-content:flex-end}
+.settingshead{display:flex;align-items:center;gap:8px}
+.tagoff{flex:none;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--muted);font-size:.8rem;font-weight:600}
+.vcard label{display:block;font-weight:600;font-size:.9rem;margin:0 0 6px}
+.vcard .field{margin-bottom:12px}
+.vcard .field:last-child{margin-bottom:0}
+.cols{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);padding:0;overflow-x:auto;overscroll-behavior-x:contain}
+.cols .result{min-width:0;padding:14px;border-top:0;border-left:1.5px solid var(--line)}
+.cols .result:first-child{padding-top:14px;border-left:0}
+.cols > p{padding:14px}
+.result .who{font-weight:600;margin-bottom:4px}
+.result .text{white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Kategorien verwalten */
+.subrow{display:flex;gap:8px;margin-top:8px}
+.subrow .field{min-height:44px;padding:8px 12px}
+.subrow .btn{min-height:44px}
+.subrow .btn.icon{width:44px}
+.indent{margin-left:14px;padding-left:12px;border-left:3px solid var(--chip)}
+
+.rank{border:1.5px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
+.rankhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ranknum{flex:none;width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700}
+.rankname{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.rankhead .btn{min-height:44px;width:44px}
+.ranklist{margin:0;padding-left:24px}
+.ranklist li{margin-bottom:6px;overflow-wrap:anywhere}
+.ranklist li b{font-weight:600}
+.check{display:flex;gap:10px;align-items:center;min-height:44px;margin-top:10px;cursor:pointer}
+.check input{flex:none;width:22px;height:22px;accent-color:var(--accent)}
+
+.cardhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.cardhead h3{margin:0;min-width:0;overflow-wrap:anywhere}
+.cardhead .btn{min-height:44px;width:44px;padding:0;display:grid;place-items:center}
+.btn svg{display:block;width:22px;height:22px}
+.actions .btn{display:grid;place-items:center}
+.actions .row{flex:none}
+.points{list-style:none;margin:0;padding:0}
+.point{display:flex;align-items:stretch;gap:6px;margin-bottom:8px}
+.pointbody{flex:1;min-width:0;background:var(--chip);border-radius:12px;padding:2px 4px}
+.pointtext{display:block;width:100%;min-height:44px;padding:10px;background:none;border:0;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.pointtitle{display:block;font-weight:600}
+.pointdesc{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;margin-top:2px;font-size:.9rem;color:var(--muted)}
+.point.given .pointbody{background:transparent;border:1.5px dashed var(--line)}
+.pointgiven{display:block;margin-top:2px;font-size:.85rem;font-weight:600;color:var(--accent)}
+.archive{margin-top:6px}
+.archive .points{margin-top:6px}
+.pointmeta{display:block;margin-top:2px;font-size:.85rem;color:var(--muted)}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:4px 0 12px}
+.thumbs:empty{display:none}
+.thumbwrap{position:relative}
+.thumb{display:block;width:100%;aspect-ratio:1;padding:0;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--chip);cursor:pointer}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.thumb img:not([src]){visibility:hidden}
+.thumbx{position:absolute;top:-8px;right:-8px;width:32px;height:32px;padding:0;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:#C0263B;font-weight:700;cursor:pointer}
+.addimg{margin-bottom:14px}
+dialog.viewer{padding:12px;max-width:min(96vw,640px)}
+.viewer img{display:block;max-width:100%;max-height:70vh;margin:0 auto 12px;border-radius:10px}
+.readdesc{display:block;font-size:.9rem;color:var(--muted);white-space:pre-wrap}
+.pointlink{display:inline-block;padding:0 10px 10px;color:var(--accent);font-weight:600;font-size:.9rem;overflow-wrap:anywhere}
+.point .btn{min-height:44px;width:44px}
+.suggest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.suggest .chip{min-height:40px;padding:4px 12px;font-size:.95rem;background:var(--surface)}
+.readpoints{margin:4px 0 0;padding-left:20px}
+.readpoints li{margin-bottom:4px;overflow-wrap:anywhere}
+.readpoints a,.ranklist a{color:var(--accent);font-weight:600}
+.readpoints a{display:block;width:fit-content;font-size:.9rem}
+.actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.actions p{margin:0}
+dialog label{display:block;font-weight:600;font-size:.9rem;margin:0 0 6px}
+dialog .field{margin-bottom:14px}
+dialog textarea.field{overflow:auto;resize:vertical}
+
+.banner{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:.95rem}
+.banner .btn{min-height:36px;padding:2px 0;color:inherit;text-decoration:underline;font-size:inherit}
+
+/* Navigation */
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1.5px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav .inner{max-width:640px;margin:0 auto;display:flex}
+nav button{flex:1;min-height:60px;background:none;border:0;cursor:pointer;color:var(--muted);font-weight:600;font-size:.95rem;border-top:3px solid transparent;margin-top:-1.5px}
+nav button[aria-current="page"]{color:var(--accent);border-top-color:var(--accent)}
+
+/* Dialog + Hinweis */
+dialog{border:0;border-radius:18px;padding:20px;max-width:min(92vw,420px);background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(20,10,30,.55)}
+dialog p{margin-bottom:18px}
+dialog .row{justify-content:flex-end}
+.toast{position:fixed;left:50%;bottom:calc(146px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.95rem;z-index:10;max-width:90vw;text-align:center}
+.toast[hidden]{display:none}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<nav aria-label="Bereiche">
+  <div class="inner">
+    <button data-view="people">Personen</button>
+    <button data-view="compare">Vergleichen</button>
+    <button data-view="settings">Einstellungen</button>
+  </div>
+</nav>
+
+<dialog id="dlg">
+  <p id="dlgText"></p>
+  <div class="row">
+    <button class="btn" id="dlgNo">Abbrechen</button>
+    <button class="btn primary" id="dlgYes">OK</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- Daten ---------- */
+var KEY = "merkbuch.v1";
+var APP_VERSION = "11.10.2026 (13)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
+
+/* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
+var BACKUP_KEY = "merkbuch.lastBackup", FIRST_KEY = "merkbuch.firstUse";
+function readDate(key){ try { var t = Number(localStorage.getItem(key)); return t > 0 ? t : 0; } catch (e) { return 0; } }
+function markBackup(){ try { localStorage.setItem(BACKUP_KEY, String(Date.now())); } catch (e) {} }
+try { if (!localStorage.getItem(FIRST_KEY)) localStorage.setItem(FIRST_KEY, String(Date.now())); } catch (e) {}
+function daysSinceBackup(){
+  var since = readDate(BACKUP_KEY) || readDate(FIRST_KEY);
+  return since ? Math.floor((Date.now() - since) / 86400000) : 0;
+}
+// Bittet den Browser, die Daten dauerhaft zu behalten (wird bei installierten Apps in der Regel gewährt)
+try { if (STANDALONE && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch (e) {}
+
+/* Datei über den Browser herunterladen (außerhalb von Claude) */
+function browserDownload(filename, text){
+  try {
+    var url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    var a = document.createElement("a");
+    a.href = url; a.download = filename; a.style.display = "none";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    return true;
+  } catch (e) { return false; }
+}
+
+/* Weitere Einstellungen, je Gerät gespeichert */
+var PREFS_KEY = "merkbuch.prefs";
+function defaultPrefs(){ return { startEdit: false, sort: "name", suggest: true, remind: 30, cmpCats: null, cmpPeople: 5 }; }
+var prefs = defaultPrefs();
+try {
+  var savedPrefs = JSON.parse(localStorage.getItem(PREFS_KEY) || "null");
+  if (savedPrefs && typeof savedPrefs === "object") {
+    prefs.startEdit = !!savedPrefs.startEdit;
+    if (/^(name|recent|birthday)$/.test(savedPrefs.sort)) prefs.sort = savedPrefs.sort;
+    prefs.suggest = savedPrefs.suggest !== false;
+    if ([0, 7, 30, 90].indexOf(Number(savedPrefs.remind)) !== -1) prefs.remind = Number(savedPrefs.remind);
+    if (Array.isArray(savedPrefs.cmpCats)) prefs.cmpCats = savedPrefs.cmpCats.map(String);
+    if ([3, 5, 8, 10].indexOf(Number(savedPrefs.cmpPeople)) !== -1) prefs.cmpPeople = Number(savedPrefs.cmpPeople);
+  }
+} catch (e) {}
+function setPref(key, value){
+  prefs[key] = value;
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
+}
+
+var DESIGN_KEY = "merkbuch.design";
+var DESIGN_VARS = ["accent", "accent-ink", "bg", "surface", "chip", "line"];
+var THEMES = {
+  beere:   { label: "Beere",   swatch: "#A8275F" },
+  blau:    { label: "Blau",    swatch: "#1D5FC2",
+    light: { accent: "#1D5FC2", bg: "#EEF2F8", chip: "#E0E8F4", line: "#D2DCEA" },
+    dark:  { accent: "#86B4FF", "accent-ink": "#0A1E3D", bg: "#10151C", surface: "#19212C", chip: "#24303F", line: "#2F3E52" } },
+  gruen:   { label: "Grün",    swatch: "#1F7A4D",
+    light: { accent: "#1F7A4D", bg: "#EEF4F0", chip: "#DFEBE3", line: "#D0DFD5" },
+    dark:  { accent: "#6FD3A0", "accent-ink": "#06281A", bg: "#101713", surface: "#18221C", chip: "#22302A", line: "#2C3F35" } },
+  orange:  { label: "Orange",  swatch: "#B4500C",
+    light: { accent: "#B4500C", bg: "#F7F1EA", chip: "#EFE4D6", line: "#E3D5C3" },
+    dark:  { accent: "#FFAB66", "accent-ink": "#3A1A00", bg: "#18130E", surface: "#221B14", chip: "#31271C", line: "#403325" } },
+  violett: { label: "Violett", swatch: "#6A3FC0",
+    light: { accent: "#6A3FC0", bg: "#F1EEF8", chip: "#E6E0F3", line: "#D8D0EA" },
+    dark:  { accent: "#B79BFF", "accent-ink": "#1F0F4A", bg: "#14111C", surface: "#1D1929", chip: "#2A2440", line: "#382F55" } },
+  grau:    { label: "Grau",    swatch: "#3A3F47",
+    light: { accent: "#3A3F47", bg: "#F1F2F3", chip: "#E4E6E8", line: "#D5D8DC" },
+    dark:  { accent: "#D5D9DF", "accent-ink": "#16181C", bg: "#121315", surface: "#1B1D20", chip: "#292C31", line: "#373B42" } }
+};
+var design = { color: "beere", mode: "auto" }, designForced = false;
+try {
+  var savedDesign = JSON.parse(localStorage.getItem(DESIGN_KEY) || "null");
+  if (savedDesign && THEMES[savedDesign.color]) design.color = savedDesign.color;
+  if (savedDesign && /^(auto|light|dark)$/.test(savedDesign.mode)) design.mode = savedDesign.mode;
+} catch (e) {}
+function applyDesign(){
+  var root = document.documentElement;
+  if (design.mode !== "auto") {
+    if (root.getAttribute("data-theme") !== design.mode) root.setAttribute("data-theme", design.mode);
+    designForced = true;
+  } else if (designForced) { root.removeAttribute("data-theme"); designForced = false; }
+  var attr = root.getAttribute("data-theme");
+  var dark = attr === "dark" || (attr !== "light" && !!window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  var theme = THEMES[design.color], vars = theme ? (dark ? theme.dark : theme.light) : null;
+  DESIGN_VARS.forEach(function(v){
+    if (vars && vars[v]) root.style.setProperty("--" + v, vars[v]); else root.style.removeProperty("--" + v);
+  });
+}
+function setDesign(key, value){
+  design[key] = value;
+  try { localStorage.setItem(DESIGN_KEY, JSON.stringify(design)); } catch (e) {}
+  applyDesign();
+}
+applyDesign();
+try {
+  var darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  if (darkQuery.addEventListener) darkQuery.addEventListener("change", applyDesign);
+  new MutationObserver(applyDesign).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+} catch (e) {}
+var DEFAULT_CATS = [
+  ["Geschenkideen", []],
+  ["Ernährung", ["Vegetarisch", "Vegan"]],
+  ["Mag", []],
+  ["Mag nicht", []],
+  ["Lieblingsessen", []],
+  ["Allergien", []],
+  ["Süßigkeiten", ["Schokolade", "Chips", "Kekse", "Fruchtgummi"], true],
+  ["Kuchen", ["Kuchen", "Torte"]],
+  ["Pizza", ["Vegetarisch", "Mit Fleisch", "Scharf"]],
+  ["Getränke", ["Mit Alkohol", "Alkoholfrei"]],
+  ["Tee & Kaffee", ["Kaffee", "Früchtetee", "Schwarzer Tee", "Kräutertee"]],
+  ["Blumen", ["Schnittblumen", "Topfpflanzen"]],
+  ["Lieblingsfarbe", []],
+  ["Junggesellinnenabschied", []],
+  // zunächst ausgeblendet
+  ["Softdrinks", ["Mit Kohlensäure", "Still", "Zuckerfrei"]],
+  ["Wein & Bier", ["Rotwein", "Weißwein", "Rosé", "Sekt", "Bier", "Alkoholfrei"]],
+  ["Eis", ["Becher", "Waffel"]],
+  ["Restaurants", []],
+  ["Hobbys", []],
+  ["Größen", []],
+  ["Düfte", []],
+  ["Bücher, Filme, Musik", ["Bücher", "Filme & Serien", "Musik"]],
+  ["Reiseziele", []]
+];
+var HIDDEN_KINDS = { soft: 1, wein: 1, eis: 1, restaurant: 1, hobby: 1, groesse: 1, duft: 1, medien: 1, reise: 1 };
+function makeCat(d){
+  var kind = KIND_BY_NAME[d[0].toLowerCase()] || "";
+  return { id: uid(), name: d[0], kind: kind, ranked: !!d[2], detail: !!d[2] || kind === "tee", hidden: !!HIDDEN_KINDS[kind],
+    subs: d[1].map(function(n){ return { id: uid(), name: n }; }) };
+}
+
+/* Wortvorschläge je Kategorie (eigene Zusammenstellung gängiger Begriffe), durch | getrennt */
+var WORD_SRC = {
+  "kaffee": "Espresso|Doppelter Espresso|Cappuccino|Latte Macchiato|Milchkaffee|Flat White|Americano|Filterkaffee|Café Crème|Espresso Macchiato|Cortado|Mokka|Türkischer Kaffee|Cold Brew|Eiskaffee|Iced Latte|Frappé|Affogato|Kaffee schwarz|mit Milch|mit Zucker|ohne Zucker|mit Hafermilch|mit Sojamilch|mit Mandelmilch|laktosefreie Milch|mit Sahne|mit Sirup|Vanillesirup|Karamellsirup|Haselnusssirup|entkoffeiniert|Bohnenkaffee|Kapseln|Pads|Instantkaffee|French Press|Siebträger|Vollautomat|Handfilter|Bialetti|helle Röstung|dunkle Röstung|Arabica|trinkt keinen Kaffee|Kakao|Heiße Schokolade|Chai Latte|Matcha Latte",
+  "soft": "Wasser still|Wasser medium|Sprudel|Leitungswasser|Cola|Cola Zero|Cola light|Fritz-Kola|Pepsi|Fanta|Sprite|Spezi|Mezzo Mix|Zitronenlimo|Orangenlimo|Bionade|Club-Mate|Ginger Ale|Ginger Beer|Tonic Water|Bitter Lemon|Eistee|Eistee Pfirsich|Eistee Zitrone|Apfelschorle|Rhabarberschorle|Johannisbeerschorle|Traubenschorle|Apfelsaft|Orangensaft|Multivitaminsaft|Kirschsaft|Traubensaft|Tomatensaft|Maracujasaft|Smoothie|Energydrink|Red Bull|Malzbier|Alkoholfreies Bier|Kombucha|Zitronenwasser|Holunderblütensirup|ohne Kohlensäure|zuckerfrei|keine Süßstoffe",
+  "wein": "Rotwein|Weißwein|Rosé|Sekt|Prosecco|Champagner|Crémant|Cava|trocken|halbtrocken|lieblich|feinherb|Riesling|Grauburgunder|Weißburgunder|Chardonnay|Sauvignon Blanc|Silvaner|Müller-Thurgau|Gewürztraminer|Pinot Grigio|Grüner Veltliner|Spätburgunder|Pinot Noir|Merlot|Cabernet Sauvignon|Dornfelder|Lemberger|Trollinger|Primitivo|Chianti|Rioja|Tempranillo|Shiraz|Malbec|Zweigelt|Bordeaux|Glühwein|Federweißer|Weinschorle|Portwein|Sherry|Pils|Helles|Weizen|Hefeweizen|Kristallweizen|Kölsch|Alt|Export|Schwarzbier|Bockbier|Kellerbier|IPA|Pale Ale|Craft Beer|Radler|Alkoholfreies Bier|Alkoholfreies Weizen|Cider|Whisky|Gin|Rum|Wodka|Obstler|Likör|trinkt keinen Alkohol",
+  "essen": "Pasta|Spaghetti Bolognese|Spaghetti Carbonara|Lasagne|Pizza|Risotto|Gnocchi|Tortellini|Schnitzel|Wiener Schnitzel|Rouladen|Gulasch|Sauerbraten|Schweinebraten|Bratwurst|Currywurst|Käsespätzle|Maultaschen|Kartoffelsalat|Bratkartoffeln|Kartoffelpuffer|Klöße|Eintopf|Linsensuppe|Kürbissuppe|Tomatensuppe|Hühnersuppe|Burger|Pommes|Döner|Dürüm|Falafel|Hummus|Sushi|Ramen|Pho|Pad Thai|Curry|Thai-Curry|Indisches Curry|Butter Chicken|Dal|Gebratene Nudeln|Gebratener Reis|Dim Sum|Frühlingsrollen|Bowl|Poke Bowl|Tacos|Burritos|Chili con Carne|Chili sin Carne|Paella|Tapas|Moussaka|Gyros|Souvlaki|Steak|Rumpsteak|Spareribs|Pulled Pork|Brathähnchen|Hähnchenbrust|Lachs|Fischstäbchen|Backfisch|Garnelen|Muscheln|Salat|Caesar Salad|Griechischer Salat|Ofengemüse|Gemüsepfanne|Auflauf|Kartoffelgratin|Quiche|Flammkuchen|Raclette|Fondue|Pfannkuchen|Kaiserschmarrn|Milchreis|Grießbrei|Rührei|Omelett|Frühstück|Brunch|Brotzeit|Käseplatte|Antipasti|Suppe|Grillen|Fingerfood|Hausmannskost|Italienisch|Asiatisch|Griechisch|Mexikanisch|Indisch|scharf|nicht scharf",
+  "eis": "Vanille|Schokolade|Erdbeere|Stracciatella|Haselnuss|Pistazie|Zitrone|Joghurt|Joghurt-Kirsch|Amarena|Malaga|Walnuss|Karamell|Salzkaramell|Cookies|Kaffee|Mokka|Tiramisu|Banane|Mango|Himbeere|Waldfrucht|Maracuja|Melone|Kokos|Minze|After Eight|Schlumpf|Engelblau|Zimt|Marzipan|Nougat|Schoko-Minz|Dunkle Schokolade|Weiße Schokolade|Sorbet|Zitronensorbet|Mangosorbet|Frozen Yogurt|Softeis|Spaghetti-Eis|Bananensplit|Eiskaffee|Eisschokolade|Milchshake|Magnum|Nogger|Cornetto|Ben & Jerry's|Häagen-Dazs|mit Sahne|ohne Sahne|mit Streuseln|mit Schokosoße|vegan|laktosefrei",
+  "restaurant": "Italienisch|Pizzeria|Griechisch|Spanisch|Tapas|Französisch|Deutsch|Gutbürgerlich|Brauhaus|Biergarten|Türkisch|Libanesisch|Persisch|Indisch|Thailändisch|Vietnamesisch|Chinesisch|Japanisch|Sushi|Ramen|Koreanisch|Mexikanisch|Amerikanisch|Burgerladen|Steakhaus|Fischrestaurant|Vegetarisch|Vegan|Café|Frühstückscafé|Brunch|Eisdiele|Imbiss|Dönerladen|Foodtruck|Sterneküche|Weinbar|Cocktailbar|Lieferdienst|Stammlokal|Lieblingsrestaurant",
+  "groesse": "Schuhgröße|Kleidergröße|Konfektionsgröße|Oberteile|T-Shirt-Größe|Pullovergröße|Hosengröße|Jeansgröße|Jackengröße|Ringgröße|BH-Größe|Hutgröße|Handschuhgröße|Gürtellänge|Sockengröße|Körpergröße|fällt klein aus|fällt groß aus|lieber weit|lieber eng",
+  "duft": "Parfum|Eau de Toilette|Eau de Parfum|Duftkerze|Raumduft|Räucherstäbchen|Duschgel|Bodylotion|blumig|frisch|fruchtig|holzig|würzig|süß|pudrig|orientalisch|herb|leicht|Zitrus|Bergamotte|Vanille|Lavendel|Rose|Jasmin|Maiglöckchen|Sandelholz|Zedernholz|Moschus|Patchouli|Amber|Kokos|Minze|Meeresbrise|Chanel|Dior|Hugo Boss|Calvin Klein|Armani|Yves Saint Laurent|Lancôme|Rituals|Jo Malone|kein Parfum|keine Duftkerzen|mag keine starken Düfte",
+  "medien": "Krimis|Thriller|Fantasy|Science-Fiction|Liebesromane|Historische Romane|Klassiker|Biografien|Sachbücher|Ratgeber|Kochbücher|Reiseführer|Comics|Graphic Novels|Manga|Lyrik|Hörbücher|Podcasts|E-Books|Lieblingsautor|Lieblingsbuch|Komödien|Dramen|Actionfilme|Horrorfilme|Dokumentationen|Animationsfilme|Disney|Marvel|Star Wars|Harry Potter|Herr der Ringe|Tatort|True Crime|Reality-TV|Sitcoms|Lieblingsfilm|Lieblingsserie|Netflix|Kino|Pop|Rock|Indie|Hip-Hop|Rap|Elektro|Techno|Schlager|Klassik|Jazz|Metal|Punk|Singer-Songwriter|Deutschpop|Musicals|Soundtracks|Schallplatten|Konzerte|Festivals|Lieblingsband|Lieblingslied|Spotify",
+  "reise": "Italien|Toskana|Südtirol|Gardasee|Rom|Venedig|Sizilien|Sardinien|Spanien|Mallorca|Barcelona|Andalusien|Kanaren|Teneriffa|Portugal|Lissabon|Algarve|Madeira|Frankreich|Paris|Provence|Bretagne|Côte d'Azur|Griechenland|Kreta|Santorin|Kroatien|Türkei|Österreich|Wien|Tirol|Schweiz|Niederlande|Amsterdam|Dänemark|Kopenhagen|Schweden|Stockholm|Norwegen|Fjorde|Island|Schottland|Irland|London|Prag|Budapest|Ostsee|Nordsee|Rügen|Sylt|Allgäu|Schwarzwald|Bayern|Hamburg|Berlin|USA|New York|Kalifornien|Kanada|Mexiko|Thailand|Bali|Japan|Vietnam|Malediven|Südafrika|Marokko|Ägypten|Australien|Neuseeland|Strandurlaub|Städtereise|Wanderurlaub|Skiurlaub|Camping|Roadtrip|Kreuzfahrt|Wellnessurlaub|Fernreise|fliegt nicht gern",
+  "ernaehrung": "vegetarisch|vegan|pescetarisch|flexitarisch|kein Schweinefleisch|kein Rindfleisch|kein Fisch|keine Meeresfrüchte|kein Alkohol|halal|koscher|laktosefrei|glutenfrei|zuckerfrei|zuckerarm|Low Carb|Keto|Paleo|Rohkost|Bio|regional|saisonal|kein Koffein|keine Pilze|keine Zwiebeln|kein Knoblauch|kein Koriander|keine Oliven|kein Käse|keine Eier|keine Milchprodukte|kein Honig|keine Nüsse|nicht scharf|gern scharf|wenig Fleisch|kein Lamm|kein Wild|keine Innereien|kein Geflügel|Intervallfasten|fructosearm|histaminarm|salzarm|kein rohes Fleisch|kein roher Fisch|kein Rosenkohl|keine Rosinen|kein Fast Food|Vollkorn|proteinreich|kalorienarm",
+  "partner": "Alexander|Andreas|Anna|Anne|Annika|Anton|Benjamin|Ben|Bernd|Birgit|Björn|Carina|Carolin|Charlotte|Christian|Christina|Christoph|Clara|Claudia|Daniel|Daniela|David|Dennis|Dominik|Elena|Elias|Elisabeth|Emil|Emilia|Emma|Eva|Fabian|Felix|Finn|Florian|Frank|Franziska|Hannah|Hannes|Heike|Helena|Henrik|Ida|Isabel|Jakob|Jan|Jana|Jannik|Jasmin|Jennifer|Jens|Jessica|Johanna|Johannes|Jonas|Jonathan|Julia|Julian|Jule|Katharina|Kathrin|Katja|Kevin|Kim|Klara|Lara|Lars|Laura|Lea|Lena|Leon|Leonie|Lisa|Luca|Lukas|Luisa|Manuel|Marc|Marcel|Maria|Marie|Marco|Marina|Mario|Markus|Martin|Martina|Mats|Matthias|Max|Maximilian|Melanie|Mia|Michael|Michelle|Miriam|Moritz|Nadine|Nico|Nicole|Niklas|Nils|Nina|Noah|Oliver|Oskar|Patrick|Paul|Paula|Peter|Philipp|Pia|Rebecca|René|Robert|Robin|Sabine|Sabrina|Sandra|Sarah|Sebastian|Simon|Simone|Sophia|Sophie|Stefan|Stefanie|Steffen|Susanne|Svenja|Sven|Tanja|Theo|Thomas|Tim|Timo|Tobias|Tom|Torsten|Vanessa|Verena|Victoria|Vincent|Yvonne",
+  "geschenk": "Buch|Hörbuch|Kochbuch|Bildband|Roman|Gutschein|Kinogutschein|Restaurantgutschein|Wellnessgutschein|Massage|Konzertkarten|Theaterkarten|Musicalkarten|Festivalticket|Kurztrip|Städtereise|Wochenendausflug|Erlebnisgutschein|Kochkurs|Backkurs|Töpferkurs|Tanzkurs|Weinprobe|Gin-Tasting|Whisky-Tasting|Escape Room|Fotoshooting|Fotobuch|Fotokalender|Bilderrahmen|Poster|Kerzen|Duftkerze|Parfum|Schmuck|Kette|Armband|Ohrringe|Ring|Uhr|Tasche|Rucksack|Geldbeutel|Schal|Mütze|Handschuhe|Socken|Pullover|Hausschuhe|Bademantel|Kuscheldecke|Kissen|Blumenstrauß|Zimmerpflanze|Vase|Pralinen|Schokolade|Wein|Sekt|Gin|Whisky|Craft Beer|Kaffee|Tee|Teekanne|Tasse|Thermobecher|Trinkflasche|Kaffeemühle|Espressokocher|Gewürzset|Olivenöl|Messer|Schneidebrett|Pfanne|Brettspiel|Kartenspiel|Puzzle|Lego|Kopfhörer|Lautsprecher|Powerbank|E-Book-Reader|Smartwatch|Schallplatte|Plattenspieler|Notizbuch|Füller|Kalender|Malset|Strickset|Yogamatte|Sporttasche|Fahrradzubehör|Wanderkarte|Picknickdecke|Hängematte|Werkzeug|Taschenmesser|Zeitschriften-Abo|Streaming-Abo|Spende|Selbstgemachtes|Marmelade|Likör|Gemeinsame Zeit|Frühstück im Bett|Ballonfahrt|Sterne-Dinner|Spa-Tag|Thermenbesuch|Zoobesuch|Museumskarte|Jahreskarte|Blumen-Abo|Pflanzen-Abo|Kosmetik|Handcreme|Badezusatz|Nagellack|Rasierset",
+  "mag": "Lesen|Wandern|Radfahren|Laufen|Schwimmen|Yoga|Tanzen|Klettern|Bouldern|Fitness|Fußball|Handball|Tennis|Skifahren|Snowboarden|Segeln|Surfen|Reiten|Angeln|Camping|Reisen|Städtetrips|Strandurlaub|Berge|Meer|Natur|Garten|Pflanzen|Kochen|Backen|Grillen|Essen gehen|Kaffee|Tee|Wein|Bier|Cocktails|Schokolade|Kino|Serien|Filme|Theater|Musicals|Konzerte|Festivals|Musik|Klavier|Gitarre|Singen|Podcasts|Hörbücher|Krimis|Fantasy|Science-Fiction|Liebesromane|Thriller|Horrorfilme|Dokus|Brettspiele|Kartenspiele|Puzzles|Videospiele|Fotografie|Malen|Zeichnen|Basteln|Stricken|Häkeln|Nähen|Töpfern|Heimwerken|Autos|Motorrad|Technik|Mode|Shopping|Flohmärkte|Museen|Kunst|Geschichte|Sprachen|Tiere|Hunde|Katzen|Pferde|Sauna|Wellness|Spaziergänge|Ausschlafen|Frühstück|Brunch|Picknick|Weihnachtsmärkte|Überraschungen|Blumen|Kerzen|Sonnenuntergänge|Regen|Schnee|Sommer|Herbst|Winter|Frühling|Karaoke|Partys|Ruhe|Meditation|Ordnung|Lange Gespräche|Spieleabende|Roadtrips|Freizeitparks|Zoo|Schwimmbad|Italienisch|Asiatisch|Sushi|Burger|Pasta|Eis",
+  "magnicht": "Menschenmengen|Lärm|Unpünktlichkeit|Frühes Aufstehen|Kälte|Hitze|Spinnen|Insekten|Smalltalk|Im Mittelpunkt stehen|Scharfes Essen|Fisch|Pilze|Rosinen|Koriander|Oliven|Lakritz|Marzipan|Rosenkohl|Alkohol|Zigarettenrauch|Parfum|Duftkerzen|Schnittblumen|Kitsch|Dekoartikel|Gutscheine|Socken als Geschenk|Unordnung|Stau|Fliegen|Höhe|Achterbahnen|Lange Autofahrten|Sport|Reality-TV|Schlager|Techno|Volksmusik|Telefonieren|Sprachnachrichten|Warten|Spontane Besuche|Enge Räume|Dunkelheit|Clowns|Blut|Nadeln|Lesen|Wandern|Radfahren|Laufen|Schwimmen|Yoga|Tanzen|Klettern|Bouldern|Fitness|Fußball|Handball|Tennis|Skifahren|Snowboarden|Segeln|Surfen|Reiten|Angeln|Camping|Reisen|Städtetrips|Strandurlaub|Berge|Meer|Natur|Garten|Pflanzen|Kochen|Backen|Grillen|Essen gehen|Kaffee|Tee|Wein|Bier|Cocktails|Schokolade|Kino|Serien|Filme|Theater|Musicals|Konzerte|Festivals|Musik|Klavier|Gitarre|Singen|Podcasts|Hörbücher|Krimis|Fantasy|Science-Fiction|Liebesromane|Thriller|Horrorfilme|Dokus|Brettspiele|Kartenspiele|Puzzles|Videospiele|Fotografie|Malen|Zeichnen|Basteln|Stricken|Häkeln|Nähen|Töpfern|Heimwerken|Autos|Motorrad|Technik|Mode|Shopping|Flohmärkte|Museen|Kunst|Geschichte|Sprachen|Tiere|Hunde|Katzen|Pferde|Sauna|Wellness|Spaziergänge|Ausschlafen|Frühstück|Brunch|Picknick|Weihnachtsmärkte|Überraschungen|Blumen|Kerzen|Sonnenuntergänge|Regen|Schnee|Sommer|Herbst|Winter|Frühling|Karaoke|Partys|Ruhe|Meditation|Ordnung|Lange Gespräche|Spieleabende|Roadtrips|Freizeitparks|Zoo|Schwimmbad|Italienisch|Asiatisch|Sushi|Burger|Pasta|Eis",
+  "kuchen": "Apfelkuchen|Käsekuchen|Marmorkuchen|Zitronenkuchen|Schokoladenkuchen|Streuselkuchen|Pflaumenkuchen|Zwetschgenkuchen|Kirschkuchen|Erdbeerkuchen|Rhabarberkuchen|Himbeerkuchen|Blaubeerkuchen|Johannisbeerkuchen|Mohnkuchen|Nusskuchen|Karottenkuchen|Rüblikuchen|Bienenstich|Butterkuchen|Zuckerkuchen|Donauwelle|Eierlikörkuchen|Rotweinkuchen|Gugelhupf|Sandkuchen|Zupfkuchen|Russischer Zupfkuchen|Mandarinen-Schmand-Kuchen|Fantakuchen|Bananenbrot|Brownies|Blondies|Cheesecake|New York Cheesecake|Apfelstrudel|Quarkstrudel|Hefezopf|Stollen|Lebkuchen|Baumkuchen|Frankfurter Kranz|Schwarzwälder Kirschtorte|Sachertorte|Linzer Torte|Käsesahnetorte|Erdbeertorte|Himbeertorte|Obsttorte|Nusstorte|Mokkatorte|Buttercremetorte|Prinzregententorte|Herrentorte|Eierlikörtorte|Schokotorte|Schokoladen-Sahne-Torte|Mousse-au-Chocolat-Torte|Philadelphia-Torte|Maulwurfkuchen|Windbeuteltorte|Schmandtorte|Mohntorte|Marzipantorte|Giotto-Torte|Raffaello-Torte|Oreo-Torte|Naked Cake|Zitronentarte|Tarte au Chocolat|Tarte Tatin|Apfeltarte|Birnentarte|Erdbeertarte|Tiramisu|Biskuitrolle|Eclairs|Windbeutel|Muffins|Cupcakes|Donuts|Berliner|Zimtschnecken|Franzbrötchen|Croissant|Waffeln|Crêpes|Pfannkuchen|Kaiserschmarrn|Macarons|Cake Pops|Nussecken|Florentiner|Baklava|Pavlova|ohne Sahne|ohne Nüsse|ohne Rosinen|mit Streuseln",
+  "blumen": "Rosen|Rote Rosen|Weiße Rosen|Tulpen|Pfingstrosen|Sonnenblumen|Lilien|Gerbera|Nelken|Orchideen|Hortensien|Ranunkeln|Freesien|Dahlien|Chrysanthemen|Margeriten|Lavendel|Flieder|Maiglöckchen|Narzissen|Osterglocken|Hyazinthen|Krokusse|Schneeglöckchen|Vergissmeinnicht|Veilchen|Stiefmütterchen|Iris|Anemonen|Astern|Calla|Amaryllis|Mohn|Kornblumen|Wildblumen|Wiesenblumen|Schleierkraut|Eukalyptus|Trockenblumen|Pampasgras|Protea|Strelitzie|Gladiolen|Rittersporn|Löwenmäulchen|Levkojen|Lisianthus|Eustoma|Alstroemeria|Inkalilie|Wicken|Kamille|Jasmin|Magnolie|Kirschblüten|Zinnien|Cosmea|Ringelblumen|Tagetes|Geranien|Petunien|Begonien|Fuchsien|Alpenveilchen|Weihnachtsstern|Christrose|Azalee|Rhododendron|Hibiskus|Oleander|Bougainvillea|Kamelie|Monstera|Ficus|Gummibaum|Sukkulenten|Kakteen|Aloe Vera|Efeutute|Grünlilie|Bogenhanf|Zamioculcas|Calathea|Pilea|Einblatt|Anthurie|Palme|Olivenbaum|Zitronenbaum|Bonsai|Kräutertopf|Basilikum|Rosmarin|Bunter Strauß|Pastellfarben|Saisonblumen|keine Lilien|keine Schnittblumen",
+  "sub:schokolade": "Vollmilch|Zartbitter|Weiße Schokolade|Edelbitter|Nuss|Haselnuss|Ganze Nuss|Mandel|Marzipan|Nougat|Karamell|Salzkaramell|Joghurt|Erdbeer-Joghurt|Keks|Knusperkeks|Cornflakes|Trauben-Nuss|Rum-Trauben-Nuss|Pfefferminz|Orange|Chili|Kokos|Kaffee|Espresso|Krokant|Alpenmilch|Noisette|Pralinen|Trüffel|Schokoriegel|Ritter Sport|Milka|Lindt|Lindor|Kinder Schokolade|Kinder Bueno|Kinder Riegel|Duplo|Hanuta|Knoppers|Ferrero Rocher|Raffaello|Mon Chéri|Merci|Toffifee|After Eight|Snickers|Mars|Twix|Bounty|KitKat|Lion|M&Ms|Smarties|Maltesers|Toblerone|Yogurette|Schogetten|Tony's Chocolonely|vegan|ohne Nüsse|laktosefrei",
+  "sub:chips": "Paprika|Gesalzen|Salt & Vinegar|Sour Cream & Onion|Chili|Sweet Chili|Barbecue|Käse|Cheese & Onion|Pfeffer|Meersalz|Kesselchips|Riffelchips|Stapelchips|Tortilla-Chips|Nachos|Linsenchips|Gemüsechips|Süßkartoffelchips|Erdnussflips|Flips|Salzstangen|Brezeln|Cracker|Popcorn süß|Popcorn salzig|Erdnüsse|Cashews|Nussmix|Studentenfutter|Pringles|Funny-frisch|Chio|Lorenz Crunchips|Kettle|Lay's|Doritos|Pom-Bär|ungarisch|orientalisch",
+  "sub:kekse": "Butterkekse|Schokokekse|Cookies|Chocolate Chip Cookies|Doppelkekse|Prinzenrolle|Oreo|Haferkekse|Vollkornkekse|Spritzgebäck|Mürbeteigplätzchen|Vanillekipferl|Zimtsterne|Lebkuchen|Spekulatius|Dominosteine|Printen|Makronen|Kokosmakronen|Florentiner|Cantuccini|Amarettini|Shortbread|Waffeln|Neapolitaner|Eiswaffeln|Löffelbiskuits|Russisch Brot|Butterplätzchen|Schwarz-Weiß-Gebäck|Nussecken|Heidesand|Leibniz|Pick Up|Choco Leibniz|Bahlsen|Lotus Biscoff|Karamellkekse|Hobbits|Digestive|Jaffa Cakes|Soft Cake|ohne Nüsse|vegan|glutenfrei",
+  "sub:fruchtgummi": "Gummibärchen|Goldbären|Saure Pommes|Saure Zungen|Saure Würmer|Saure Apfelringe|Pfirsichringe|Cola-Fläschchen|Saure Cola-Fläschchen|Schlümpfe|Frösche|Schnuller|Kirschen|Happy Cherries|Erdbeeren|Primavera Erdbeeren|Schaumzucker|Marshmallows|Speckmäuse|Weiße Mäuse|Colorado|Phantasia|Tropifrutti|Color-Rado|Lakritz|Lakritzschnecken|Salzlakritz|Weingummi|ohne Gelatine|Haribo|Katjes|Trolli|Nimm2 Lachgummi|Maoam|Hitschler|Fritt|Kaubonbons|sauer|süß|zuckerfrei|vegan",
+  "suess": "Eis|Bonbons|Lollis|Kaugummi|Popcorn|Gebrannte Mandeln|Zuckerwatte|Schaumküsse|Pudding|Mousse au Chocolat|Karamellbonbons|Toffees|Fudge|Müsliriegel|Vollmilch|Zartbitter|Weiße Schokolade|Edelbitter|Nuss|Haselnuss|Ganze Nuss|Mandel|Marzipan|Nougat|Karamell|Salzkaramell|Joghurt|Erdbeer-Joghurt|Keks|Knusperkeks|Cornflakes|Trauben-Nuss|Rum-Trauben-Nuss|Pfefferminz|Orange|Chili|Kokos|Kaffee|Espresso|Krokant|Alpenmilch|Noisette|Pralinen|Trüffel|Schokoriegel|Ritter Sport|Milka|Lindt|Lindor|Kinder Schokolade|Kinder Bueno|Kinder Riegel|Duplo|Hanuta|Knoppers|Ferrero Rocher|Raffaello|Mon Chéri|Merci|Toffifee|After Eight|Snickers|Mars|Twix|Bounty|KitKat|Lion|M&Ms|Smarties|Maltesers|Toblerone|Yogurette|Schogetten|Tony's Chocolonely|vegan|ohne Nüsse|laktosefrei|Paprika|Gesalzen|Salt & Vinegar|Sour Cream & Onion|Sweet Chili|Barbecue|Käse|Cheese & Onion|Pfeffer|Meersalz|Kesselchips|Riffelchips|Stapelchips|Tortilla-Chips|Nachos|Linsenchips|Gemüsechips|Süßkartoffelchips|Erdnussflips|Flips|Salzstangen|Brezeln|Cracker|Popcorn süß|Popcorn salzig|Erdnüsse|Cashews|Nussmix|Studentenfutter|Pringles|Funny-frisch|Chio|Lorenz Crunchips|Kettle|Lay's|Doritos|Pom-Bär|ungarisch|orientalisch|Butterkekse|Schokokekse|Cookies|Chocolate Chip Cookies|Doppelkekse|Prinzenrolle|Oreo|Haferkekse|Vollkornkekse|Spritzgebäck|Mürbeteigplätzchen|Vanillekipferl|Zimtsterne|Lebkuchen|Spekulatius|Dominosteine|Printen|Makronen|Kokosmakronen|Florentiner|Cantuccini|Amarettini|Shortbread|Waffeln|Neapolitaner|Eiswaffeln|Löffelbiskuits|Russisch Brot|Butterplätzchen|Schwarz-Weiß-Gebäck|Nussecken|Heidesand|Leibniz|Pick Up|Choco Leibniz|Bahlsen|Lotus Biscoff|Karamellkekse|Hobbits|Digestive|Jaffa Cakes|Soft Cake|glutenfrei|Gummibärchen|Goldbären|Saure Pommes|Saure Zungen|Saure Würmer|Saure Apfelringe|Pfirsichringe|Cola-Fläschchen|Saure Cola-Fläschchen|Schlümpfe|Frösche|Schnuller|Kirschen|Happy Cherries|Erdbeeren|Primavera Erdbeeren|Schaumzucker|Marshmallows|Speckmäuse|Weiße Mäuse|Colorado|Phantasia|Tropifrutti|Color-Rado|Lakritz|Lakritzschnecken|Salzlakritz|Weingummi|ohne Gelatine|Haribo|Katjes|Trolli|Nimm2 Lachgummi|Maoam|Hitschler|Fritt|Kaubonbons|sauer|süß|zuckerfrei",
+  "farbe": "Rot|Dunkelrot|Weinrot|Bordeaux|Rosa|Altrosa|Pink|Magenta|Koralle|Lachs|Orange|Apricot|Pfirsich|Gelb|Senfgelb|Zitronengelb|Gold|Grün|Dunkelgrün|Hellgrün|Olivgrün|Salbeigrün|Mintgrün|Tannengrün|Smaragdgrün|Limette|Türkis|Petrol|Blau|Hellblau|Dunkelblau|Marineblau|Königsblau|Himmelblau|Babyblau|Azurblau|Jeansblau|Lila|Violett|Flieder|Lavendel|Aubergine|Pflaume|Braun|Hellbraun|Dunkelbraun|Beige|Sand|Creme|Taupe|Cognac|Terrakotta|Rostrot|Ocker|Khaki|Weiß|Schwarz|Grau|Hellgrau|Dunkelgrau|Anthrazit|Silber|Kupfer|Roségold|Bronze|Pastellfarben|Erdtöne|Bunt|Neonfarben",
+  "pizza": "Margherita|Salami|Schinken|Prosciutto|Funghi|Prosciutto e Funghi|Hawaii|Tonno|Tonno e Cipolla|Quattro Formaggi|Quattro Stagioni|Capricciosa|Diavola|Calzone|Marinara|Napoli|Regina|Vegetariana|Verdure|Spinaci|Rucola|Parma|Parma e Rucola|Bufala|Burrata|Caprese|Frutti di Mare|Gamberetti|Salmone|Bolognese|Carbonara|Mista|Speciale|Peperoni|Salsiccia|Nduja|Mortadella|Bresaola|Gorgonzola|Ziegenkäse|Ziegenkäse und Honig|Pesto|Tartufo|Trüffel|Ortolana|Melanzane|Parmigiana|Bianca|Pizzabrötchen|Pizza Döner|Sucuk|Hähnchen|BBQ Chicken|Hollandaise|Flammkuchen|Extra Käse|Knoblauch|Zwiebeln|Oliven|Artischocken|Kapern|Sardellen|Mais|Paprika|Peperoni scharf|Jalapeños|Ananas|ohne Zwiebeln|ohne Oliven|ohne Pilze|dünner Boden|dicker Rand|Käserand|glutenfreier Teig|veganer Käse|Chiliöl|Knoblauchöl",
+  "cocktails": "Aperol Spritz|Hugo|Mojito|Caipirinha|Piña Colada|Cuba Libre|Gin Tonic|Moscow Mule|Margarita|Daiquiri|Strawberry Daiquiri|Cosmopolitan|Sex on the Beach|Tequila Sunrise|Long Island Iced Tea|Mai Tai|Zombie|Swimming Pool|Blue Lagoon|Negroni|Negroni Sbagliato|Americano|Old Fashioned|Manhattan|Whiskey Sour|Amaretto Sour|Pisco Sour|Gin Fizz|Gin Basil Smash|Tom Collins|Martini|Espresso Martini|Pornstar Martini|White Russian|Black Russian|Bloody Mary|Bellini|Mimosa|Kir Royal|French 75|Lillet Wild Berry|Limoncello Spritz|Sarti Spritz|Campari Orange|Campari Soda|Wodka Lemon|Wodka Energy|Jacky Cola|Whisky Cola|Rum Cola|Dark and Stormy|Paloma|Tequila Tonic|Sangria|Bowle|Glühwein|Feuerzangenbowle|Eierlikör|Baileys|Irish Coffee|Caipiroska|Wodka Sour|Erdbeer-Mojito|Touch Down|Planter's Punch|Hurricane|Bahama Mama|Singapore Sling|Sidecar|Mint Julep|Aviation|Last Word|Paper Plane|Penicillin|Boulevardier|Sazerac|Virgin Mojito|Virgin Colada|Virgin Hugo|Ipanema|Shirley Temple|Safer Sex on the Beach|Alkoholfreier Gin Tonic|Alkoholfreier Aperol|Crodino|Sanbittèr|Fruchtpunsch|Coconut Kiss|Sekt|Prosecco|Champagner|Weißwein|Rotwein|Rosé|Weinschorle|Bier|Radler|Craft Beer|Cider|Whisky|Rum|Tequila|süß|sauer|fruchtig|herb|nicht zu stark",
+  "tee": "Schwarzer Tee|Earl Grey|Darjeeling|Assam|Ceylon|English Breakfast|Ostfriesentee|Lapsang Souchong|Chai|Chai Latte|Masala Chai|Grüner Tee|Sencha|Matcha|Gunpowder|Jasmintee|Genmaicha|Bancha|Weißer Tee|Oolong|Pu-Erh|Rooibos|Rooibos Vanille|Rooibos Karamell|Honeybush|Mate|Früchtetee|Hagebutte|Hibiskus|Waldfrucht|Apfel|Bratapfel|Kirsche|Erdbeer-Sahne|Himbeere|Pfirsich|Mango|Maracuja|Zitrone|Orange|Blutorange|Heiße Liebe|Türkischer Apfel|Kräutertee|Pfefferminze|Marokkanische Minze|Nana-Minze|Kamille|Fenchel|Fenchel-Anis-Kümmel|Salbei|Thymian|Melisse|Zitronenmelisse|Zitronenverbene|Lavendel|Brennnessel|Lindenblüte|Holunderblüte|Ingwer|Ingwer-Zitrone|Ingwer-Orange|Kurkuma|Süßholz|Zimt|Kräutermischung|Alpenkräuter|Gute-Nacht-Tee|Schlaf-und-Nerven-Tee|Erkältungstee|Husten-und-Bronchial-Tee|Magen-Darm-Tee|Yogi Tee|Wintertee|Weihnachtstee|Glühweintee|Eistee|Bubble Tea|Kombucha|mit Milch|mit Zucker|mit Honig|mit Zitrone|mit Kandis|ohne Koffein|loser Tee|Teebeutel|Teekanne|Meßmer|Pukka|Ronnefeldt",
+  "jga": "Sektfrühstück|Brunch|Wellness-Tag|Spa|Sauna|Massage|Maniküre|Cocktailkurs|Cocktailabend|Weinprobe|Gin-Tasting|Kochkurs|Backkurs|Tanzkurs|Poledance-Kurs|Burlesque-Kurs|Twerk-Kurs|Bachata-Kurs|Fotoshooting|Escape Room|Lasertag|Bowling|Minigolf|Schwarzlicht-Minigolf|Kartfahren|Klettern|Hochseilgarten|Kanutour|Floßfahrt|Stand-up-Paddling|Bootstour|Partyboot|Hausboot|Bierbike|Limousinenfahrt|Partybus|Stadtrallye|Schnitzeljagd|Krimidinner|Karaoke|Clubnacht|Kneipentour|Barhopping|Pyjamaparty|Mädelsabend|Filmabend|Spieleabend|Picknick|Grillen|Wochenendtrip|Städtereise|Hütte in den Bergen|Ferienhaus am Meer|Mallorca|Amsterdam|Prag|Hamburg|Berlin|Köln|Wien|Barcelona|Freizeitpark|Musical|Konzert|Festival|Töpfern|Blumenkranz binden|Parfum-Workshop|Schmuck-Workshop|Malkurs|Yoga-Retreat|Reiten|Alpakawanderung|Fallschirmsprung|Bungee-Jumping|Stripshow|keine Stripshow|kein Bauchladen|keine peinlichen Aufgaben|keine Verkleidung|einheitliche T-Shirts|Schärpe|Schleier|Fotobox|Gästebuch|Überraschungsgäste|Budget niedrig halten|nur ein Tag|mit Übernachtung|Wunschgäste",
+  "allergien": "Erdnüsse|Haselnüsse|Walnüsse|Mandeln|Cashews|Pistazien|Nüsse|Schalenfrüchte|Sesam|Soja|Gluten|Weizen|Zöliakie|Laktose|Milcheiweiß|Milch|Hühnerei|Ei|Fisch|Krebstiere|Garnelen|Meeresfrüchte|Weichtiere|Sellerie|Senf|Lupinen|Sulfite|Fructose|Histamin|Sorbit|Äpfel|Kirschen|Pfirsiche|Erdbeeren|Kiwi|Bananen|Ananas|Zitrusfrüchte|Tomaten|Karotten|Paprika|Steinobst|Kernobst|Pollen|Gräser|Birke|Hasel|Erle|Beifuß|Ambrosia|Roggen|Heuschnupfen|Hausstaubmilben|Hausstaub|Schimmelpilze|Tierhaare|Katzenhaare|Hundehaare|Pferdehaare|Federn|Bienengift|Wespengift|Insektenstiche|Nickel|Latex|Duftstoffe|Parfum|Konservierungsstoffe|Farbstoffe|Glutamat|Penicillin|Antibiotika|Aspirin|Ibuprofen|Pflaster|Sonnenallergie|Wolle|Kreuzallergie|Notfallset dabei|Adrenalin-Pen|Spuren möglich|keine bekannt"
+};
+var KIND_BY_NAME = { "ernährung": "ernaehrung", "partnerin": "partner", "geschenkideen": "geschenk", "mag": "mag", "mag nicht": "magnicht",
+  "kuchen": "kuchen", "blumen": "blumen", "süßigkeiten": "suess", "lieblingsfarbe": "farbe", "pizza": "pizza", "cocktails": "cocktails",
+  "tee": "tee", "junggesellinnenabschied": "jga", "allergien": "allergien" };
+WORD_SRC.hobby = WORD_SRC.mag;
+WORD_SRC.tee = WORD_SRC.tee + "|" + WORD_SRC.kaffee;
+WORD_SRC.cocktails = WORD_SRC.cocktails + "|" + WORD_SRC.soft + "|" + WORD_SRC.wein;
+["kaffee:kaffee", "kaffee & tee:tee", "tee & kaffee:tee", "getränke:cocktails", "softdrinks:soft", "wein & bier:wein", "lieblingsessen:essen", "eis:eis", "restaurants:restaurant", "hobbys:hobby",
+  "größen:groesse", "düfte:duft", "bücher, filme, musik:medien", "reiseziele:reise"].forEach(function(x){
+  var i = x.lastIndexOf(":"); KIND_BY_NAME[x.slice(0, i)] = x.slice(i + 1);
+});
+var wordCache = {};
+function wordsFor(key){
+  if (!key || !WORD_SRC[key]) return null;
+  if (!wordCache[key]) wordCache[key] = WORD_SRC[key].split("|");
+  return wordCache[key];
+}
+
+var MAX_IMGS = 6;   // Bilder je Notiz
+var idCounter = 0;
+function uid(){ idCounter++; return Date.now().toString(36) + idCounter.toString(36) + Math.random().toString(36).slice(2,6); }
+
+function freshState(){
+  return {
+    version: 11,
+    categories: DEFAULT_CATS.filter(function(d){ return d[0] !== "PartnerIn"; }).map(makeCat),
+    people: []
+  };
+}
+
+/* Notizen sind einzelne Punkte { id, title, desc, url }. Ältere Stände (Freitext oder nur Text) werden zerlegt. */
+function toPoints(v){
+  var out = [];
+  function add(pt, id, src){
+    if (!pt.title && pt.desc) { pt.title = pt.desc; pt.desc = ""; }
+    var imgs = src && Array.isArray(src.imgs) ? src.imgs.map(String).slice(0, MAX_IMGS) : [];
+    if (!pt.title) return;
+    var point = { id: id || uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: imgs };
+    if (src && src.given) {   // liegt im Geschenkarchiv
+      point.given = true;
+      point.givenNote = String(src.givenNote || "").trim().slice(0, 300);
+      point.givenAt = /^\d{4}-\d{2}-\d{2}$/.test(String(src.givenAt || "")) ? src.givenAt : "";
+    }
+    out.push(point);
+  }
+  if (Array.isArray(v)) {
+    v.forEach(function(n){
+      if (!n || typeof n !== "object") return;
+      var link = safeUrl(String(n.url || "")) || "";
+      var id = n.id ? String(n.id) : "";
+      if (typeof n.title === "string" || typeof n.desc === "string") {
+        add({ title: String(n.title || "").trim(), desc: String(n.desc || "").trim(), url: link }, id, n);
+      } else {
+        var pt = parsePoint(String(n.text || ""));
+        if (link) pt.url = link;
+        add(pt, id, n);
+      }
+    });
+  } else if (typeof v === "string") {
+    v.split(/\n+/).forEach(function(line){ add(parsePoint(line)); });
+  }
+  return out;
+}
+/* Zerlegt eine Eingabe in Titel, Beschreibung und Link.
+   Getrennt wird am ersten Doppelpunkt (mit Leerzeichen danach) oder an einem frei stehenden Bindestrich;
+   eine enthaltene Internetadresse wird als Link übernommen. */
+function parsePoint(raw){
+  raw = String(raw || "");
+  var url = "";
+  var m = raw.match(/(?:https?:\/\/|www\.)\S+/i);
+  if (m) {
+    var u = safeUrl(m[0].replace(/[),.;!?]+$/, ""));
+    if (u) { url = u; raw = raw.replace(m[0], " "); }
+  }
+  raw = raw.replace(/\s+/g, " ").trim();
+  var title = raw, desc = "";
+  var sep = raw.match(/:\s|\s[-–—]\s/);
+  if (sep) {
+    title = raw.slice(0, sep.index).trim();
+    desc = raw.slice(sep.index + sep[0].length).trim();
+  }
+  title = title.replace(/[:\s–—-]+$/, "").trim() || title;
+  if (!title && desc) { title = desc; desc = ""; }
+  if (!title && url) { try { title = new URL(url).hostname.replace(/^www\./, ""); } catch (e) {} }
+  return { title: title, desc: desc, url: url };
+}
+/* Gibt eine aufrufbare http(s)-Adresse zurück, "" für leer und null für ungültig. */
+function safeUrl(v){
+  v = String(v || "").trim();
+  if (!v) return "";
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) v = "https://" + v;
+  try {
+    var u = new URL(v);
+    if ((u.protocol === "http:" || u.protocol === "https:") && u.hostname.indexOf(".") !== -1) return u.href;
+  } catch (e) {}
+  return null;
+}
+
+/* Fotos liegen verkleinert als Bilddaten direkt bei der Person */
+function validPhoto(v){ return typeof v === "string" && v.length < 400000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(v); }
+
+/* Visitenkarte: feste Felder je Person */
+var CARD_FIELDS = [["birthday", "Geburtsdatum", "date"], ["partner", "PartnerIn", "text"], ["kids", "Kinder", "text"], ["phone", "Telefon", "tel"],
+  ["email", "E-Mail", "email"], ["address", "Adresse", "area"], ["other", "Sonstiges", "area"]];
+function cleanCard(c){
+  var out = {};
+  CARD_FIELDS.forEach(function(f){
+    var v = c && typeof c === "object" ? String(c[f[0]] || "") : "";
+    if (f[2] === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(v)) v = "";
+    out[f[0]] = v.slice(0, 2000);
+  });
+  // selbst ergänzte Felder: Bezeichnung + Angabe
+  out.extra = [];
+  (c && Array.isArray(c.extra) ? c.extra : []).forEach(function(x){
+    if (!x || typeof x !== "object") return;
+    var label = String(x.label || "").slice(0, 200), value = String(x.value || "").slice(0, 2000);
+    if (label.trim() || value.trim()) out.extra.push({ id: String(x.id || uid()), label: label, value: value });
+  });
+  return out;
+}
+function cardOf(p){ if (!p.card) p.card = cleanCard(null); return p.card; }
+function cardLines(p){
+  var c = p.card || {}, lines = [];
+  CARD_FIELDS.forEach(function(f){
+    var v = String(c[f[0]] || "").trim();
+    if (!v) return;
+    if (f[2] === "date") v = v.slice(8, 10) + "." + v.slice(5, 7) + "." + v.slice(0, 4);
+    lines.push(f[1] + ": " + v.replace(/\s*\n\s*/g, ", "));
+  });
+  (c.extra || []).forEach(function(x){
+    var label = String(x.label || "").trim(), value = String(x.value || "").trim();
+    if (value) lines.push((label || "Weiteres") + ": " + value); else if (label) lines.push(label);
+  });
+  return lines;
+}
+
+/* Prüft und bereinigt geladene oder importierte Daten. Gibt null zurück, wenn sie unbrauchbar sind. */
+function normalize(data){
+  if (!data || typeof data !== "object" || !Array.isArray(data.categories) || !Array.isArray(data.people)) return null;
+  var cats = [];
+  data.categories.forEach(function(c){
+    if (!c || typeof c !== "object") return;
+    var subs = [];
+    (Array.isArray(c.subs) ? c.subs : []).forEach(function(s){
+      if (s && typeof s === "object") subs.push({ id: String(s.id || uid()), name: String(s.name || "") });
+    });
+    cats.push({ id: String(c.id || uid()), name: String(c.name || ""), kind: String(c.kind || ""), ranked: !!c.ranked, detail: !!(c.detail || c.ranked), hidden: !!c.hidden, subs: subs });
+  });
+  var people = [];
+  data.people.forEach(function(p){
+    if (!p || typeof p !== "object") return;
+    var entries = {};
+    var src = (p.entries && typeof p.entries === "object") ? p.entries : {};
+    Object.keys(src).forEach(function(catId){
+      var e = src[catId];
+      if (!e || typeof e !== "object") return;
+      var notes = {};
+      if (e.subNotes && typeof e.subNotes === "object") Object.keys(e.subNotes).forEach(function(k){ notes[k] = toPoints(e.subNotes[k]); });
+      entries[catId] = {
+        notes: toPoints(e.notes !== undefined ? e.notes : e.text),
+        subs: (Array.isArray(e.subs) ? e.subs : []).map(String),
+        subNotes: notes
+      };
+    });
+    people.push({ id: String(p.id || uid()), name: String(p.name || ""), photo: validPhoto(p.photo) ? p.photo : "", card: cleanCard(p.card), updated: Number(p.updated) || 0, seen: Number(p.seen) || 0, entries: entries });
+  });
+  return migrate({ version: Number(data.version) || 1, categories: cats, people: people });
+}
+
+/* Bringt ältere Datenstände auf den aktuellen Stand, ohne Einträge zu verlieren. */
+function migrate(s){
+  if (s.version < 2) {
+    function same(a, b){ return a.trim().toLowerCase() === b.toLowerCase(); }
+    var sweets = s.categories.filter(function(c){ return same(c.name, "Süßigkeiten"); })[0];
+    if (sweets) {
+      sweets.ranked = true;
+      var wanted = ["Schokolade", "Chips", "Kekse", "Fruchtgummi"];
+      var ordered = wanted.map(function(w){
+        return sweets.subs.filter(function(x){ return same(x.name, w); })[0] || { id: uid(), name: w };
+      });
+      sweets.subs.forEach(function(x){
+        if (ordered.indexOf(x) !== -1) return;
+        var used = s.people.some(function(p){ var e = p.entries[sweets.id]; return !!e && e.subs.indexOf(x.id) !== -1; });
+        if (same(x.name, "Lakritz") && !used) return;   // alter Vorschlag, nirgends angekreuzt
+        ordered.push(x);
+      });
+      sweets.subs = ordered;
+    }
+    if (!s.categories.some(function(c){ return same(c.name, "Ernährung"); })) {
+      s.categories.push({ id: uid(), name: "Ernährung", ranked: false,
+        subs: ["Vegetarisch", "Vegan", "Sonstiges"].map(function(n){ return { id: uid(), name: n }; }) });
+    }
+    s.version = 2;
+  }
+  if (s.version < 3) {
+    // Ernährung steht ganz oben
+    var idx = -1;
+    s.categories.forEach(function(c, i){ if (idx === -1 && c.name.trim().toLowerCase() === "ernährung") idx = i; });
+    if (idx > 0) s.categories.unshift(s.categories.splice(idx, 1)[0]);
+    s.version = 3;
+  }
+  if (s.version < 5) s.version = 5;   // Notizen als Punkte mit Titel, Beschreibung und Link: die Umwandlung passiert beim Einlesen
+  if (s.version < 6) {
+    // Wortvorschläge: Kategorien merken sich ihre Wortliste, auch wenn sie später umbenannt werden
+    s.categories.forEach(function(c){ if (!c.kind) c.kind = KIND_BY_NAME[c.name.trim().toLowerCase()] || ""; });
+    s.version = 6;
+  }
+  if (s.version < 7) {
+    // PartnerIn steht jetzt in der Visitenkarte: vorhandene Einträge dorthin übernehmen, Kategorie entfernen
+    s.categories.filter(function(c){ return c.kind === "partner"; }).forEach(function(pc){
+      s.people.forEach(function(p){
+        var e = p.entries[pc.id];
+        if (!e) return;
+        var texts = (e.notes || []).map(function(n){ return noteLabel(n) + (n.url ? " (" + n.url + ")" : ""); });
+        if (!p.card) p.card = cleanCard(null);
+        if (texts.length) p.card.partner = [p.card.partner].concat(texts).filter(Boolean).join(", ");
+        delete p.entries[pc.id];
+      });
+    });
+    s.categories = s.categories.filter(function(c){ return c.kind !== "partner"; });
+    // neue Standardkategorien ergänzen und alles in die neue Reihenfolge bringen: Getränke, Essen, Weiteres, dann eigene
+    var order = {};
+    DEFAULT_CATS.forEach(function(d, i){
+      var kind = KIND_BY_NAME[d[0].toLowerCase()];
+      order[kind] = i;
+      if (!s.categories.some(function(c){ return c.kind === kind || c.name.trim().toLowerCase() === d[0].toLowerCase(); })) s.categories.push(makeCat(d));
+    });
+    s.categories = s.categories.map(function(c, i){ return { c: c, k: order[c.kind] !== undefined ? order[c.kind] : 1000 + i }; })
+      .sort(function(a, b){ return a.k - b.k; }).map(function(x){ return x.c; });
+    s.version = 7;
+  }
+  if (s.version < 8) {
+    // Kaffee und Tee werden eine Kategorie; Kaffee ist dort eine Unterkategorie
+    var tea = s.categories.filter(function(c){ return c.kind === "tee"; })[0];
+    var cof = s.categories.filter(function(c){ return c.kind === "kaffee"; })[0];
+    if (!tea && cof) {
+      cof.kind = "tee";
+      if (cof.name.trim() === "Kaffee") cof.name = "Kaffee & Tee";
+    } else if (tea) {
+      if (tea.name.trim() === "Tee") tea.name = "Kaffee & Tee";
+      var ksub = tea.subs.filter(function(x){ return x.name.trim().toLowerCase() === "kaffee"; })[0];
+      if (!ksub) { ksub = { id: uid(), name: "Kaffee" }; tea.subs.unshift(ksub); }
+      if (cof) {
+        s.people.forEach(function(p){
+          var ce = p.entries[cof.id];
+          if (!ce) return;
+          var picked = cof.subs.filter(function(x){ return ce.subs.indexOf(x.id) !== -1; }).map(function(x){ return x.name; });
+          var notes = (ce.notes || []).slice();
+          if (picked.length) notes.unshift({ id: uid(), title: "Kaffee", desc: picked.join(", "), url: "", imgs: [] });
+          if (notes.length) {
+            var te = p.entries[tea.id] || (p.entries[tea.id] = { notes: [], subs: [], subNotes: {} });
+            if (te.subs.indexOf(ksub.id) === -1) te.subs.push(ksub.id);
+            te.notes = (te.notes || []).concat(notes);
+          }
+          delete p.entries[cof.id];
+        });
+        var at = s.categories.indexOf(cof);
+        s.categories = s.categories.filter(function(c){ return c !== cof && c !== tea; });
+        s.categories.splice(Math.min(at, s.categories.length), 0, tea);
+      }
+    }
+    s.version = 8;
+  }
+  if (s.version < 9) {
+    // Die später ergänzten Kategorien sind zunächst ausgeblendet, außer es steht schon etwas darin
+    s.categories.forEach(function(c){
+      if (!HIDDEN_KINDS[c.kind] || c.hidden) return;
+      var used = s.people.some(function(p){
+        var e = p.entries[c.id];
+        return !!e && ((e.subs || []).length > 0 || (e.notes || []).length > 0 ||
+          Object.keys(e.subNotes || {}).some(function(k){ return e.subNotes[k].length > 0; }));
+      });
+      if (!used) c.hidden = true;
+    });
+    s.version = 9;
+  }
+  if (s.version < 10) {
+    s.categories.forEach(function(c){
+      if (c.kind === "ernaehrung") {
+        // „Sonstiges“ entfällt; dafür gibt es die Notizen
+        var gone = c.subs.filter(function(x){ return x.name.trim().toLowerCase() === "sonstiges"; });
+        gone.forEach(function(g){
+          s.people.forEach(function(p){
+            var e = p.entries[c.id];
+            if (!e) return;
+            e.subs = (e.subs || []).filter(function(id){ return id !== g.id; });
+            if (e.subNotes) delete e.subNotes[g.id];
+          });
+        });
+        c.subs = c.subs.filter(function(x){ return gone.indexOf(x) === -1; });
+      }
+      if (c.kind === "tee") c.detail = true;                                   // Auswahl über + mit eigenen Notizen, ohne Rangfolge
+      if (c.kind === "cocktails" && c.name.trim() === "Cocktails") c.name = "Getränke";
+    });
+    s.version = 10;
+  }
+  if (s.version < 11) {
+    // neue Reihenfolge; Lieblingsessen gehört jetzt zu den eingeblendeten Kategorien
+    var rank = {};
+    DEFAULT_CATS.forEach(function(d, i){ rank[KIND_BY_NAME[d[0].toLowerCase()]] = i; });
+    s.categories.forEach(function(c){
+      if (c.kind === "essen") c.hidden = false;
+      if (c.kind === "tee" && c.name.trim() === "Kaffee & Tee") c.name = "Tee & Kaffee";
+    });
+    s.categories = s.categories.map(function(c, i){ return { c: c, k: rank[c.kind] !== undefined ? rank[c.kind] : 1000 + i }; })
+      .sort(function(a, b){ return a.k - b.k; }).map(function(x){ return x.c; });
+    s.version = 11;
+  }
+  return s;
+}
+
+var storageOk = true;
+function load(){
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var s = normalize(JSON.parse(raw));
+      if (s) return s;
+    }
+  } catch (e) { storageOk = false; }
+  return freshState();
+}
+var state = load();
+
+var saveTimer = null;
+/* Merkt bei der gerade geöffneten Person, dass sie eben bearbeitet wurde */
+function touchPerson(){
+  if (view !== "person" || !currentPersonId) return;
+  var p = state.people.filter(function(x){ return x.id === currentPersonId; })[0];
+  if (p) p.updated = Date.now();
+}
+function saveNow(){
+  touchPerson();
+  clearTimeout(saveTimer); saveTimer = null;
+  try { localStorage.setItem(KEY, JSON.stringify(state)); storageOk = true; }
+  catch (e) { storageOk = false; }
+  scheduleGc();
+}
+function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 300); }
+document.addEventListener("visibilitychange", function(){ if (document.hidden && saveTimer) saveNow(); });
+window.addEventListener("pagehide", function(){ if (saveTimer) saveNow(); });
+if (storageOk) saveNow();   // hält einen eben aktualisierten Datenstand fest
+
+/* ---------- Hilfsfunktionen ---------- */
+function h(tag, attrs){
+  var node = document.createElement(tag);
+  if (attrs) Object.keys(attrs).forEach(function(k){
+    var v = attrs[k];
+    if (v === null || v === undefined || v === false) return;
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.slice(0,2) === "on") node.addEventListener(k.slice(2), v);
+    else if (k === "value") node.value = v;
+    else if (k === "icon") node.innerHTML = v;   // nur für die festen Symbole unten
+    else node.setAttribute(k, v === true ? "" : v);
+  });
+  for (var i = 2; i < arguments.length; i++) {
+    var c = arguments[i];
+    if (c === null || c === undefined || c === false) continue;
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+var COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+var SAVE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>';
+var EYE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+var EYE_OFF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 3l16 18"/></svg>';
+var catsOpen = false;    // Kategorien-Abschnitt in den Einstellungen aufgeklappt
+var designOpen = false;  // Design-Abschnitt in den Einstellungen aufgeklappt
+var settingsOpen = {};   // aufgeklappte Kategorien in den Einstellungen
+var PENCIL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13 7l4 4"/></svg>';
+var CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+var GIFT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/><path d="M12 8v12"/><path d="M12 8c-1.2-3.4-5-3.6-5-1.4C7 8 9.5 8 12 8zM12 8c1.2-3.4 5-3.6 5-1.4C17 8 14.500 8 12 8z"/></svg>';
+var UNDO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L5 10l4-4"/><path d="M5 10h9a5 5 0 0 1 0 10h-3"/></svg>';
+var CARD_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.6 5.4-1.6 6 0"/><path d="M15 10h3M15 14h3"/></svg>';
+/* Tage bis zum nächsten Geburtstag (0 = heute), null ohne Geburtsdatum */
+function daysToBirthday(p){
+  var b = p.card && p.card.birthday;
+  if (!b) return null;
+  var now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var next = new Date(today.getFullYear(), Number(b.slice(5, 7)) - 1, Number(b.slice(8, 10)));
+  if (next < today) next = new Date(today.getFullYear() + 1, Number(b.slice(5, 7)) - 1, Number(b.slice(8, 10)));
+  return Math.round((next - today) / 86400000);
+}
+function birthdayText(p){
+  var d = daysToBirthday(p), b = p.card.birthday;
+  return "Geburtstag am " + b.slice(8, 10) + "." + b.slice(5, 7) + "., " + (d === 0 ? "heute" : d === 1 ? "morgen" : "in " + d + " Tagen");
+}
+function sortedPeople(){
+  var list = state.people.slice();
+  if (prefs.sort === "recent") return list.sort(function(a, b){
+    return Math.max(b.seen || 0, b.updated || 0) - Math.max(a.seen || 0, a.updated || 0) || byName(a, b);
+  });
+  if (prefs.sort === "birthday") return list.sort(function(a, b){
+    var x = daysToBirthday(a), y = daysToBirthday(b);
+    return (x === null ? 1e6 : x) - (y === null ? 1e6 : y) || byName(a, b);
+  });
+  return list.sort(byName);
+}
+function byName(a, b){ return a.name.localeCompare(b.name, "de", { sensitivity: "base" }); }
+function displayName(p){ return p.name.trim() || "Ohne Namen"; }
+function catName(c){ return c.name.trim() || "Ohne Titel"; }
+function hue(str){ var n = 0; for (var i = 0; i < str.length; i++) n = (n * 31 + str.charCodeAt(i)) % 360; return n; }
+function avatar(p, big){
+  var cls = "avatar" + (big ? " big" : "");
+  if (p.photo) return h("img", { class: cls, src: p.photo, alt: "" });
+  var name = displayName(p);
+  var a = h("span", { class: cls, "aria-hidden": "true", text: name.charAt(0).toUpperCase() });
+  a.style.background = "hsl(" + hue(name) + " 45% 40%)";
+  return a;
+}
+
+/* Verkleinert ein gewähltes Bild auf ein quadratisches Foto (Ausschnitt aus der Mitte) */
+function shrinkPhoto(file){
+  return new Promise(function(resolve, reject){
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      try {
+        var side = Math.min(img.naturalWidth, img.naturalHeight), size = 256;
+        var canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        canvas.getContext("2d").drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+        var data = canvas.toDataURL("image/jpeg", 0.82);
+        URL.revokeObjectURL(url);
+        if (validPhoto(data)) resolve(data); else reject(new Error("Bild"));
+      } catch (e) { URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("Bild")); };
+    img.src = url;
+  });
+}
+
+/* Foto einer Person wählen, ersetzen oder entfernen */
+function photoDialog(p){
+  var d = h("dialog", null);
+  function close(){ d.remove(); }
+  function setPhoto(data){
+    var before = p.photo;
+    p.photo = data;
+    saveNow();
+    if (!storageOk && data) {          // Speicher voll: Foto nicht behalten
+      p.photo = before; saveNow();
+      toast("Der Speicher ist voll, das Foto wurde nicht gespeichert");
+    } else toast(data ? "Foto gespeichert" : "Foto entfernt");
+    close(); flushPending(); render();
+  }
+  var file = h("input", { type: "file", accept: "image/*" });
+  file.style.display = "none";
+  file.addEventListener("change", function(){
+    var f = file.files && file.files[0];
+    if (!f) return;
+    shrinkPhoto(f).then(setPhoto, function(){ toast("Dieses Bild konnte nicht gelesen werden"); });
+  });
+  var buttons = h("div", { class: "stack" },
+    h("button", { class: "btn primary", type: "button", text: p.photo ? "Anderes Foto wählen" : "Foto wählen", onclick: function(){ file.click(); } }),
+    p.photo ? h("button", { class: "btn danger", type: "button", text: "Foto entfernen", onclick: function(){ setPhoto(""); } }) : null,
+    h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }));
+  d.appendChild(h("div", { class: "photopreview" }, avatar(p)));
+  d.appendChild(file);
+  d.appendChild(buttons);
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+}
+
+function grow(t){ t.style.height = "auto"; t.style.height = (t.scrollHeight + 4) + "px"; }
+
+function subName(s){ return s.name.trim() || "Ohne Titel"; }
+function subById(cat, id){ return cat.subs.filter(function(x){ return x.id === id; })[0] || null; }
+
+/* Was bei einer Person in einer Kategorie steht: Auswahl (bei Rangfolge sortiert, mit Notizen) + Notizen */
+function entryOf(person, cat){
+  var e = person.entries[cat.id];
+  var items = [];
+  if (e) {
+    if (cat.ranked) {
+      e.subs.forEach(function(id){
+        var s = subById(cat, id);
+        if (s) items.push({ name: subName(s), notes: (e.subNotes || {})[id] || [] });
+      });
+    } else {
+      cat.subs.forEach(function(s){
+        if (e.subs.indexOf(s.id) !== -1) items.push({ name: subName(s), notes: cat.detail ? ((e.subNotes || {})[s.id] || []) : [] });
+      });
+    }
+  }
+  return { ranked: !!cat.ranked, detail: hasDetail(cat), items: items, subs: items.map(function(i){ return i.name; }),
+    notes: e ? (e.notes || []).filter(function(n){ return !n.given; }) : [],
+    archive: e ? (e.notes || []).filter(function(n){ return !!n.given; }) : [] };
+}
+function hasDetail(cat){ return !!(cat.ranked || cat.detail); }
+function noteLabel(n){ return n.title + (n.desc ? ": " + n.desc : ""); }
+function noteTexts(notes){ return notes.map(noteLabel); }
+function entryLine(e){
+  var parts = e.items.map(function(it, i){
+    return (e.ranked ? (i + 1) + ". " : "") + it.name + (it.notes.length ? " (" + noteTexts(it.notes).join("; ") + ")" : "");
+  });
+  return parts.concat(noteTexts(e.notes)).join(", ");
+}
+function visibleCats(){ return state.categories.filter(function(c){ return !c.hidden; }); }
+function isFilled(person, cat){ var e = entryOf(person, cat); return e.subs.length > 0 || e.notes.length > 0 || e.archive.length > 0; }
+function givenLabel(n){
+  var when = n.givenAt ? n.givenAt.slice(8, 10) + "." + n.givenAt.slice(5, 7) + "." + n.givenAt.slice(0, 4) : "";
+  return "Geschenkt" + (when ? " am " + when : "") + (n.givenNote ? ", " + n.givenNote : "");
+}
+function editableEntry(person, catId){
+  if (!person.entries[catId]) person.entries[catId] = { notes: [], subs: [], subNotes: {} };
+  var e = person.entries[catId];
+  if (!e.notes) e.notes = [];
+  if (!e.subNotes) e.subNotes = {};
+  return e;
+}
+
+/* Text zum Kopieren: eine Kategorie bzw. alle ausgefüllten Kategorien einer Person */
+function noteLine(n){ return noteLabel(n) + (n.url ? " (" + n.url + ")" : ""); }
+function categoryText(person, cat){
+  var e = entryOf(person, cat);
+  if (!e.subs.length && !e.notes.length) return "";
+  var lines = [];
+  if (e.detail) {
+    lines.push(catName(cat) + ":");
+    e.items.forEach(function(it, i){
+      lines.push((e.ranked ? (i + 1) + ". " : "• ") + it.name);
+      it.notes.forEach(function(n){ lines.push("   - " + noteLine(n)); });
+    });
+  } else {
+    lines.push(catName(cat) + ":" + (e.subs.length ? " " + e.subs.join(", ") : ""));
+  }
+  e.notes.forEach(function(n){ lines.push("- " + noteLine(n)); });
+  return lines.join("\n");
+}
+function personText(person){
+  var blocks = [];
+  visibleCats().forEach(function(c){ var t = categoryText(person, c); if (t) blocks.push(t); });
+  var card = cardLines(person);
+  if (!blocks.length && !card.length) return "";
+  return displayName(person) + (card.length ? "\n" + card.join("\n") : "") + (blocks.length ? "\n\n" + blocks.join("\n\n") : "");
+}
+
+function showDialog(d){ if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }
+
+function copyText(text, emptyMessage){
+  if (!text) { toast(emptyMessage); return; }
+  function manual(){
+    // Zwischenablage nicht erreichbar: Text zum Markieren anzeigen
+    var ta = h("textarea", { class: "field", readonly: true, rows: "8", "aria-label": "Text zum Kopieren", value: text });
+    var d = h("dialog", null,
+      h("p", { text: "Kopieren hat hier nicht geklappt. Markiere den Text und kopiere ihn selbst:" }), ta,
+      h("div", { class: "row" }, h("button", { class: "btn primary", text: "Schließen", onclick: function(){ d.remove(); } })));
+    d.addEventListener("close", function(){ d.remove(); });
+    document.body.appendChild(d); showDialog(d); ta.focus(); ta.select();
+  }
+  function legacy(){
+    var ok = false;
+    var ta = h("textarea", { value: text, readonly: true });
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta);
+    try { ta.select(); ok = !!document.execCommand && document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) toast("Kopiert"); else manual();
+  }
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    navigator.clipboard.writeText(text).then(function(){ toast("Kopiert"); }, legacy);
+  } else legacy();
+}
+
+/* Notizen als Punkte: Enter (oder +) legt einen Punkt an, ✕ entfernt ihn, Antippen öffnet Titel, Beschreibung und Link. */
+/* Vorschläge für eine Kategorie (oder eine ihrer Unterkategorien): zuerst eigene frühere Einträge, dann die Wortliste */
+function suggestionsFor(cat, sub){
+  var out = [], seen = {};
+  function push(t){ var k = t.toLowerCase(); if (!seen[k]) { seen[k] = 1; out.push(t); } }
+  state.people.forEach(function(p){
+    var e = p.entries[cat.id];
+    if (!e) return;
+    var notes = sub ? ((e.subNotes || {})[sub.id] || []) : (e.notes || []);
+    notes.forEach(function(n){ push(n.title); });
+  });
+  var words = (sub && wordsFor("sub:" + sub.name.trim().toLowerCase())) || wordsFor(cat.kind) || [];
+  words.forEach(push);
+  return out;
+}
+
+var flushers = [];   // übernimmt angefangene Eingaben sofort, z. B. vor dem Kopieren oder Wechseln der Ansicht
+function flushPending(){ flushers.slice().forEach(function(f){ f(); }); }
+
+var archiveOpen = {};   // aufgeklappte Geschenkarchive, je Person und Kategorie
+function today(){ return stamp(); }
+
+/* gift: Schlüssel (Person + Kategorie), wenn Wünsche als geschenkt markiert und ins Archiv gelegt werden können; sonst leer */
+function notesBlock(read, write, placeholder, label, suggest, gift){
+  var list = h("ul", { class: "points" });
+  var sugg = h("div", { class: "suggest", hidden: true });
+  var words = null, blurTimer = null;
+  function hideSuggest(){ sugg.textContent = ""; sugg.hidden = true; }
+  function showSuggest(){
+    sugg.textContent = "";
+    var v = input.value, q = v.trim().toLowerCase();
+    // nur solange der Titel getippt wird, ab zwei Buchstaben
+    if (!suggest || !prefs.suggest || q.length < 2 || /:\s|\s[-–—]\s|:$|\/\//.test(v)) { sugg.hidden = true; return; }
+    if (!words) words = suggest();
+    var starts = [], inner = [];
+    for (var i = 0; i < words.length && starts.length < 6; i++) {
+      var l = words[i].toLowerCase();
+      if (l === q) continue;
+      if (l.indexOf(q) === 0) starts.push(words[i]);
+      else if (inner.length < 6 && (l.indexOf(" " + q) !== -1 || l.indexOf("-" + q) !== -1)) inner.push(words[i]);
+    }
+    starts.concat(inner).slice(0, 6).forEach(function(w){
+      sugg.appendChild(h("button", { class: "chip", type: "button", text: w, "aria-label": "Vorschlag " + w + " übernehmen",
+        onmousedown: function(ev){ ev.preventDefault(); },   // Eingabefeld behält den Fokus
+        onclick: function(){ clearTimeout(blurTimer); input.value = w; hideSuggest(); input.focus(); } }));
+    });
+    sugg.hidden = !sugg.firstChild;
+  }
+  var input = h("input", { class: "field", type: "text", placeholder: placeholder, "aria-label": label, autocomplete: "off", enterkeyhint: "done" });
+
+  function makeItem(n){
+    var li = h("li", { class: "point" });
+    function fill(){
+      li.textContent = "";
+      var open = h("button", { class: "pointtext", type: "button", "aria-label": noteLabel(n) + " – Details ansehen und bearbeiten",
+        onclick: function(){ editPoint(n, fill); } },
+        h("span", { class: "pointtitle", text: n.title }));
+      if (n.desc) open.appendChild(h("span", { class: "pointdesc", text: n.desc }));
+      if (n.imgs && n.imgs.length) open.appendChild(h("span", { class: "pointmeta", text: n.imgs.length === 1 ? "1 Bild" : n.imgs.length + " Bilder" }));
+      var body = h("div", { class: "pointbody" }, open);
+      if (n.url) body.appendChild(h("a", { class: "pointlink", href: n.url, target: "_blank", rel: "noopener noreferrer", text: "Link öffnen" }));
+      li.appendChild(body);
+      if (gift) li.appendChild(h("button", { class: "btn icon", type: "button", icon: GIFT_ICON, "aria-label": "„" + n.title + "“ als geschenkt markieren", title: "Als geschenkt markieren",
+        onclick: function(){ giftDialog(n, drawAll); } }));
+      li.appendChild(h("button", { class: "btn icon danger", type: "button", text: "✕", "aria-label": "Notiz „" + n.title + "“ entfernen",
+        onclick: function(){
+          var a = write(), i = a.indexOf(n);
+          if (i !== -1) a.splice(i, 1);
+          saveNow(); li.remove();
+        } }));
+    }
+    fill();
+    return li;
+  }
+  // Archivierter Wunsch: gestrichelt, mit Anlass und Datum; lässt sich zurückholen
+  function makeArchived(n){
+    var open = h("button", { class: "pointtext", type: "button", "aria-label": noteLabel(n) + " – Details ansehen und bearbeiten",
+      onclick: function(){ editPoint(n, drawAll); } },
+      h("span", { class: "pointtitle", text: n.title }));
+    if (n.desc) open.appendChild(h("span", { class: "pointdesc", text: n.desc }));
+    open.appendChild(h("span", { class: "pointgiven", text: givenLabel(n) }));
+    return h("li", { class: "point given" }, h("div", { class: "pointbody" }, open),
+      h("button", { class: "btn icon", type: "button", icon: UNDO_ICON, "aria-label": "„" + n.title + "“ zurück zu den Wünschen", title: "Zurück zu den Wünschen",
+        onclick: function(){ delete n.given; delete n.givenNote; delete n.givenAt; saveNow(); drawAll(); toast("Wieder bei den Wünschen"); } }),
+      h("button", { class: "btn icon danger", type: "button", text: "✕", "aria-label": "„" + n.title + "“ aus dem Archiv löschen",
+        onclick: function(){
+          var a = write(), i = a.indexOf(n);
+          if (i !== -1) a.splice(i, 1);
+          saveNow(); drawAll();
+        } }));
+  }
+  var archive = gift ? h("div", { class: "archive" }) : null;
+  function drawAll(){
+    list.textContent = "";
+    read().forEach(function(n){ if (!n.given) list.appendChild(makeItem(n)); });
+    if (!archive) return;
+    archive.textContent = "";
+    var items = read().filter(function(n){ return !!n.given; })
+      .sort(function(a, b){ return String(b.givenAt || "").localeCompare(String(a.givenAt || "")); });
+    if (!items.length) return;
+    var open = !!archiveOpen[gift];
+    archive.appendChild(h("button", { class: "btn quiet morebtn", type: "button", "aria-expanded": open ? "true" : "false",
+      text: (open ? "▾ " : "▸ ") + "Geschenkarchiv (" + items.length + ")",
+      onclick: function(){ archiveOpen[gift] = !open; drawAll(); } }));
+    if (!open) return;
+    var ul = h("ul", { class: "points" });
+    items.forEach(function(n){ ul.appendChild(makeArchived(n)); });
+    archive.appendChild(ul);
+  }
+  function commit(){
+    var pt = parsePoint(input.value);
+    if (!pt.title) return;
+    var n = { id: uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: [] };
+    write().push(n);
+    input.value = "";
+    hideSuggest();
+    words = null;
+    saveNow();
+    list.appendChild(makeItem(n));
+  }
+  // Angefangenes geht nicht verloren: kurz warten, falls gerade ein Vorschlag angetippt wird
+  input.addEventListener("blur", function(){
+    clearTimeout(blurTimer);
+    blurTimer = setTimeout(function(){ if (document.activeElement !== input) commit(); }, 250);
+  });
+  input.addEventListener("focus", function(){ clearTimeout(blurTimer); words = null; });
+  input.addEventListener("input", showSuggest);
+  flushers.push(function(){ clearTimeout(blurTimer); commit(); });
+  drawAll();
+
+  return h("div", null, list, sugg,
+    h("form", { class: "row", onsubmit: function(ev){ ev.preventDefault(); commit(); input.focus(); } },
+      input, h("button", { class: "btn icon", type: "submit", text: "+", "aria-label": "Notiz hinzufügen" })),
+    archive);
+}
+
+/* Wunsch als geschenkt markieren: fragt nach dem Anlass und legt ihn ins Geschenkarchiv */
+function giftDialog(n, done){
+  var occasion = h("input", { class: "field", type: "text", id: "giftOccasion", placeholder: "z. B. Geburtstag 2026", autocomplete: "off" });
+  var d = h("dialog", null);
+  function close(){ d.remove(); }
+  d.appendChild(h("form", { onsubmit: function(ev){
+      ev.preventDefault();
+      n.given = true; n.givenNote = occasion.value.trim().slice(0, 300); n.givenAt = today();
+      saveNow(); close(); done();
+      toast("Ins Geschenkarchiv verschoben");
+    } },
+    h("p", { text: "„" + n.title + "“ wurde verschenkt? Der Wunsch wandert dann ins Geschenkarchiv." }),
+    h("label", { for: "giftOccasion", text: "Anlass (freiwillig)" }), occasion,
+    h("div", { class: "row" },
+      h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }),
+      h("button", { class: "btn primary", type: "submit", text: "Ins Archiv" }))));
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+}
+
+/* ---------- Bilder zu Notizen ----------
+   Die Bilder liegen getrennt in der Browser-Datenbank (IndexedDB), damit der Platz reicht.
+   An der Notiz steht nur ein Verweis; Backup und Personen-Datei nehmen die Bilder mit. */
+var imgDbP = null, gcHold = 0, gcTimer = null;
+function imgDb(){
+  if (!imgDbP) imgDbP = new Promise(function(resolve, reject){
+    var req;
+    try { req = indexedDB.open("merkbuch-bilder", 1); } catch (e) { reject(e); return; }
+    req.onupgradeneeded = function(){ req.result.createObjectStore("img"); };
+    req.onsuccess = function(){ resolve(req.result); };
+    req.onerror = function(){ reject(req.error); };
+  });
+  return imgDbP;
+}
+function imgStore(mode, work){
+  return imgDb().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction("img", mode), req = work(tx.objectStore("img"));
+      tx.oncomplete = function(){ resolve(req ? req.result : undefined); };
+      tx.onerror = tx.onabort = function(){ reject(tx.error); };
+    });
+  });
+}
+function imgPut(id, data){ return imgStore("readwrite", function(st){ return st.put(data, id); }); }
+function imgGet(id){ return imgStore("readonly", function(st){ return st.get(id); }); }
+function validImage(v){ return typeof v === "string" && v.length < 1500000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(v); }
+
+function imageIds(people){
+  var ids = [], seen = {};
+  function take(notes){ (notes || []).forEach(function(n){ (n.imgs || []).forEach(function(id){ if (!seen[id]) { seen[id] = 1; ids.push(id); } }); }); }
+  people.forEach(function(p){
+    Object.keys(p.entries || {}).forEach(function(k){
+      var e = p.entries[k];
+      take(e.notes);
+      Object.keys(e.subNotes || {}).forEach(function(sk){ take(e.subNotes[sk]); });
+    });
+  });
+  return ids;
+}
+/* Bilder für eine Datei einsammeln bzw. aus einer Datei übernehmen; beides scheitert nie */
+function collectImages(ids){
+  return Promise.all(ids.map(function(id){
+    return imgGet(id).then(function(d){ return [id, d]; }, function(){ return [id, null]; });
+  })).then(function(pairs){
+    var out = {};
+    pairs.forEach(function(x){ if (validImage(x[1])) out[x[0]] = x[1]; });
+    return out;
+  }, function(){ return {}; });
+}
+function storeImages(map){
+  if (!map || typeof map !== "object") return Promise.resolve();
+  return Promise.all(Object.keys(map).filter(function(id){ return validImage(map[id]); }).map(function(id){
+    return imgPut(id, map[id]).catch(function(){});
+  })).then(function(){}, function(){});
+}
+/* Räumt Bilder weg, auf die keine Notiz mehr verweist */
+function scheduleGc(){ clearTimeout(gcTimer); gcTimer = setTimeout(gcImages, 3000); }
+function gcImages(){
+  if (!storageOk) return;
+  if (gcHold > 0) { scheduleGc(); return; }
+  var used = {};
+  imageIds(state.people).forEach(function(id){ used[id] = 1; });
+  imgStore("readwrite", function(st){
+    var r = st.getAllKeys();
+    r.onsuccess = function(){ if (gcHold > 0) return; r.result.forEach(function(k){ if (!used[k]) st.delete(k); }); };
+    return null;
+  }).catch(function(){});
+}
+
+/* Verkleinert ein Bild auf höchstens 1000 Pixel Kantenlänge */
+function shrinkImage(file){
+  return new Promise(function(resolve, reject){
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      try {
+        var k = Math.min(1, 1000 / Math.max(img.naturalWidth, img.naturalHeight));
+        var canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * k));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * k));
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        var data = canvas.toDataURL("image/jpeg", 0.78);
+        URL.revokeObjectURL(url);
+        if (validImage(data)) resolve(data); else reject(new Error("Bild"));
+      } catch (e) { URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("Bild")); };
+    img.src = url;
+  });
+}
+function showImage(src, alt){
+  var d = h("dialog", { class: "viewer" }, h("img", { src: src, alt: alt }),
+    h("div", { class: "row" }, h("button", { class: "btn primary", type: "button", text: "Schließen", onclick: function(){ d.remove(); } })));
+  d.addEventListener("close", function(){ d.remove(); });
+  document.body.appendChild(d); showDialog(d);
+}
+
+/* Titel, Beschreibung, Link und Bilder einer Notiz ansehen und ändern */
+function editPoint(n, redraw){
+  var title = h("input", { class: "field", type: "text", id: "pointTitle", autocomplete: "off", value: n.title });
+  var desc = h("textarea", { class: "field", rows: "4", id: "pointDesc", value: n.desc || "" });
+  var link = h("input", { class: "field", type: "text", inputmode: "url", id: "pointLink", placeholder: "https://…", autocomplete: "off", autocapitalize: "off", value: n.url || "" });
+  var occasion = h("input", { class: "field", type: "text", id: "pointOccasion", placeholder: "z. B. Geburtstag 2026", autocomplete: "off", value: n.givenNote || "" });
+  var givenAt = h("input", { class: "field", type: "date", id: "pointGivenAt", value: n.givenAt || "" });
+  var giftBox = n.given ? h("div", null,
+    h("label", { for: "pointOccasion", text: "Anlass" }), occasion,
+    h("label", { for: "pointGivenAt", text: "Geschenkt am" }), givenAt) : null;
+  var d = h("dialog", null);
+  var closed = false;
+  function close(){ if (closed) return; closed = true; gcHold--; d.remove(); scheduleGc(); }
+
+  // Bilder: Änderungen gelten erst mit „Speichern“
+  var imgs = (n.imgs || []).slice();
+  gcHold++;
+  var thumbs = h("div", { class: "thumbs" });
+  function drawThumbs(){
+    thumbs.textContent = "";
+    imgs.forEach(function(id){
+      var im = h("img", { alt: "Bild zu " + n.title });
+      imgGet(id).then(function(data){ if (data) im.src = data; }, function(){});
+      thumbs.appendChild(h("div", { class: "thumbwrap" },
+        h("button", { class: "thumb", type: "button", "aria-label": "Bild groß ansehen", onclick: function(){ if (im.src) showImage(im.src, im.alt); } }, im),
+        h("button", { class: "thumbx", type: "button", text: "✕", "aria-label": "Bild entfernen", onclick: function(){
+          var i = imgs.indexOf(id);
+          if (i !== -1) imgs.splice(i, 1);
+          drawThumbs();
+        } })));
+    });
+    addBtn.disabled = imgs.length >= MAX_IMGS;
+  }
+  var imgFile = h("input", { type: "file", accept: "image/*", multiple: true });
+  imgFile.style.display = "none";
+  imgFile.addEventListener("change", function(){
+    var files = Array.prototype.slice.call(imgFile.files || []);
+    imgFile.value = "";
+    var chain = Promise.resolve();
+    files.forEach(function(f){
+      chain = chain.then(function(){
+        if (imgs.length >= MAX_IMGS) { toast("Höchstens " + MAX_IMGS + " Bilder je Notiz"); return; }
+        return shrinkImage(f).then(function(data){
+          var id = uid();
+          return imgPut(id, data).then(function(){ imgs.push(id); drawThumbs(); });
+        }).catch(function(){ toast("Dieses Bild konnte nicht gespeichert werden"); });
+      });
+    });
+  });
+  var addBtn = h("button", { class: "btn addimg", type: "button", text: "Bild hinzufügen", onclick: function(){ imgFile.click(); } });
+  var imgBox = h("div", null, h("label", { text: "Bilder" }), thumbs, addBtn, imgFile);
+  drawThumbs();
+
+  function save(ev){
+    ev.preventDefault();
+    var t = title.value.trim();
+    if (!t) { toast("Die Notiz braucht einen Titel"); title.focus(); return; }
+    var u = safeUrl(link.value);
+    if (u === null) { toast("Das ist kein gültiger Link"); link.focus(); return; }
+    n.title = t; n.desc = desc.value.trim(); n.url = u; n.imgs = imgs;
+    if (n.given) { n.givenNote = occasion.value.trim().slice(0, 300); n.givenAt = givenAt.value || ""; }
+    saveNow(); close(); redraw();
+  }
+  d.appendChild(h("form", { onsubmit: save },
+    h("label", { for: "pointTitle", text: "Titel" }), title,
+    h("label", { for: "pointDesc", text: "Beschreibung" }), desc,
+    h("label", { for: "pointLink", text: "Link (leer lassen für keinen Link)" }), link,
+    giftBox,
+    imgBox,
+    h("div", { class: "row" },
+      h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }),
+      h("button", { class: "btn primary", type: "submit", text: "Speichern" }))));
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+}
+
+var toastTimer = null;
+function toast(msg){
+  var t = document.getElementById("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.hidden = true; }, 2600);
+}
+
+var dlg = document.getElementById("dlg");
+function ask(message, yesLabel){
+  return new Promise(function(resolve){
+    document.getElementById("dlgText").textContent = message;
+    var yes = document.getElementById("dlgYes"), no = document.getElementById("dlgNo");
+    yes.textContent = yesLabel || "OK";
+    function done(v){ yes.onclick = no.onclick = dlg.oncancel = null; if (dlg.open) dlg.close(); resolve(v); }
+    yes.onclick = function(){ done(true); };
+    no.onclick = function(){ done(false); };
+    dlg.oncancel = function(ev){ ev.preventDefault(); done(false); };
+    if (typeof dlg.showModal === "function") dlg.showModal(); else done(window.confirm(message));
+  });
+}
+
+/* ---------- PIN-Sperre ----------
+   Eine Bildschirmsperre für die App: Ohne PIN wird nichts angezeigt. Die gespeicherten Daten und Backup-Dateien
+   sind dadurch nicht verschlüsselt. Gespeichert wird nur ein Prüfwert der PIN, nicht die PIN selbst. */
+var LOCK_KEY = "merkbuch.lock";
+var RESET_HOURS = 24;   // Wartezeit beim Zurücksetzen mit Wartezeit
+/* Erlaubte Wege, eine vergessene PIN zurückzusetzen. Alles ist zunächst aus; Code und Antwort liegen nur als Prüfwert vor. */
+function cleanRec(r){
+  r = r && typeof r === "object" ? r : {};
+  function hashed(x){ return x && x.salt && x.hash ? { salt: String(x.salt), hash: String(x.hash) } : null; }
+  var q = hashed(r.question);
+  if (q) q.q = String(r.question.q || "").slice(0, 200);
+  return {
+    code: hashed(r.code),
+    question: q && q.q ? q : null,
+    bio: r.bio && r.bio.id ? { id: String(r.bio.id) } : null,          // Entsperren mit Fingerabdruck oder Gesicht
+    bioReset: !!(r.bioReset && r.bio && r.bio.id),                     // damit auch die PIN zurücksetzen dürfen
+    delay: !!r.delay,
+    delayUntil: Number(r.delayUntil) || 0
+  };
+}
+var lock = null;
+try {
+  var savedLock = JSON.parse(localStorage.getItem(LOCK_KEY) || "null");
+  if (savedLock && savedLock.hash && savedLock.salt) {
+    lock = { salt: String(savedLock.salt), hash: String(savedLock.hash), auto: [0, 1, 5].indexOf(Number(savedLock.auto)) !== -1 ? Number(savedLock.auto) : 1,
+      rec: cleanRec(savedLock.rec) };
+  }
+} catch (e) {}
+var locked = !!lock, wrongTries = 0, blockedUntil = 0, hiddenAt = 0;
+try { blockedUntil = Number(localStorage.getItem("merkbuch.lockwait")) || 0; } catch (e) {}   // Wartezeit übersteht ein Neuladen
+function saveLock(){
+  try { if (lock) localStorage.setItem(LOCK_KEY, JSON.stringify(lock)); else localStorage.removeItem(LOCK_KEY); } catch (e) {}
+}
+function pinHash(pin, salt){
+  var text = salt + ":" + pin;
+  if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+    return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function(buf){
+      return "s:" + Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0" + b.toString(16)).slice(-2); }).join("");
+    });
+  }
+  var a = 5381, b = 52711;   // Ausweichlösung ohne Krypto-Schnittstelle
+  for (var i = 0; i < text.length; i++) { var ch = text.charCodeAt(i); a = (a * 33) ^ ch; b = (b * 33) ^ ch; }
+  return Promise.resolve("f:" + (a >>> 0).toString(16) + (b >>> 0).toString(16));
+}
+function setPin(pin){
+  var salt = "";
+  try { var r = new Uint8Array(12); window.crypto.getRandomValues(r); salt = Array.prototype.map.call(r, function(x){ return x.toString(16); }).join(""); }
+  catch (e) { salt = String(Math.random()).slice(2) + Date.now().toString(16); }
+  return pinHash(pin, salt).then(function(hash){
+    lock = { salt: salt, hash: hash, auto: lock ? lock.auto : 1, rec: lock ? lock.rec : cleanRec(null) };
+    saveLock();
+  });
+}
+function checkPin(pin){
+  if (!lock) return Promise.resolve(true);
+  return pinHash(pin, lock.salt).then(function(hash){ return hash === lock.hash; }, function(){ return false; });
+}
+function validPin(pin){ return /^\d{4,12}$/.test(pin); }
+function doLock(){
+  if (!lock || locked) return;
+  flushPending();
+  if (saveTimer) saveNow();
+  Array.prototype.forEach.call(document.querySelectorAll("dialog"), function(d){
+    if (d.id === "dlg") { if (d.open) d.close(); } else d.remove();
+  });
+  locked = true; recovered = false; bioTried = false;
+  render();
+  window.scrollTo(0, 0);
+}
+document.addEventListener("visibilitychange", function(){
+  if (!lock || locked) return;
+  if (document.hidden) { hiddenAt = Date.now(); if (lock.auto === 0) doLock(); }
+  else if (hiddenAt && Date.now() - hiddenAt >= lock.auto * 60000) doLock();
+});
+function whenText(t){
+  var d = new Date(t);
+  return d.toLocaleDateString("de-DE") + ", " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + " Uhr";
+}
+/* Zählt Fehlversuche (PIN, Code, Antwort gemeinsam) und verhängt nach fünf eine Wartezeit */
+function failedTry(message){
+  wrongTries++;
+  if (wrongTries >= 5) {
+    wrongTries = 0; blockedUntil = Date.now() + 30000;
+    try { localStorage.setItem("merkbuch.lockwait", String(blockedUntil)); } catch (e) {}
+    toast("Zu viele Versuche. Warte 30 Sekunden.");
+  } else toast(message);
+}
+function waitSeconds(){
+  var wait = Math.ceil((blockedUntil - Date.now()) / 1000);
+  if (wait > 0) toast("Zu viele Versuche. Warte noch " + wait + " Sekunden.");
+  return wait > 0;
+}
+/* Nach erfolgreichem Zurücksetzen: App öffnen und direkt eine neue PIN verlangen */
+var recovered = false;
+function recoverSuccess(){
+  locked = false; recovered = true; wrongTries = 0; hiddenAt = 0;
+  lock.rec.delayUntil = 0; saveLock();
+  secOpen = true; view = "settings"; currentPersonId = null;
+  render(); window.scrollTo(0, 0);
+  toast("Entsperrt. Vergib jetzt eine neue PIN.");
+}
+function normCode(v){ return String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function normAnswer(v){ return String(v || "").toLowerCase().replace(/\s+/g, " ").trim(); }
+function randomHex(n){
+  try { var r = new Uint8Array(n); window.crypto.getRandomValues(r); return Array.prototype.map.call(r, function(x){ return ("0" + x.toString(16)).slice(-2); }).join(""); }
+  catch (e) { var out = ""; while (out.length < n * 2) out += Math.random().toString(16).slice(2); return out.slice(0, n * 2); }
+}
+function newRecoveryCode(){
+  var letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", hex = randomHex(12), out = "";
+  for (var i = 0; i < 12; i++) out += letters[parseInt(hex.substr(i * 2, 2), 16) % letters.length] + (i === 3 || i === 7 ? "-" : "");
+  return out;
+}
+function b64(buf){ return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); }
+function unb64(text){ var bin = atob(text), out = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+function bioSupported(){ return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && window.isSecureContext); }
+
+/* Eingabe prüfen (Code oder Antwort) */
+function recoverPrompt(title, text, label, check){
+  var input = h("input", { class: "field", type: "text", id: "recInput", autocomplete: "off", autocapitalize: "off" });
+  var d = h("dialog", null);
+  function close(){ d.remove(); }
+  d.appendChild(h("form", { onsubmit: function(ev){
+      ev.preventDefault();
+      if (waitSeconds()) return;
+      check(input.value).then(function(ok){
+        if (ok) { close(); recoverSuccess(); }
+        else { input.value = ""; input.focus(); failedTry("Das stimmt nicht"); }
+      });
+    } },
+    h("h3", { text: title }), text ? h("p", { text: text }) : null,
+    h("label", { for: "recInput", text: label }), input,
+    h("div", { class: "row" },
+      h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }),
+      h("button", { class: "btn primary", type: "submit", text: "Prüfen" }))));
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+}
+
+/* „PIN vergessen?“: zeigt die Wege, die in den Einstellungen erlaubt wurden */
+function forgotDialog(){
+  var r = lock.rec, d = h("dialog", null), box = h("div", { class: "stack" });
+  function close(){ d.remove(); }
+  function option(text, run, primary){
+    box.appendChild(h("button", { class: "btn" + (primary ? " primary" : ""), type: "button", text: text, onclick: function(){ close(); run(); } }));
+  }
+  d.appendChild(h("h3", { text: "PIN vergessen" }));
+  if (r.code) option("Wiederherstellungscode eingeben", function(){
+    recoverPrompt("Wiederherstellungscode", "", "Code", function(v){
+      return pinHash(normCode(v), r.code.salt).then(function(x){ return x === r.code.hash; }, function(){ return false; });
+    });
+  });
+  if (r.question) option("Sicherheitsfrage beantworten", function(){
+    recoverPrompt("Sicherheitsfrage", r.question.q, "Antwort", function(v){
+      return pinHash(normAnswer(v), r.question.salt).then(function(x){ return x === r.question.hash; }, function(){ return false; });
+    });
+  });
+  if (r.bio && r.bioReset) option("Mit Fingerabdruck oder Gesicht zurücksetzen", function(){
+    if (!bioSupported()) { toast("Das geht auf diesem Gerät gerade nicht"); return; }
+    bioGet().then(function(ok){ if (ok) recoverSuccess(); else toast("Das hat nicht geklappt"); });
+  });
+  if (r.delay) {
+    if (!r.delayUntil) option("Zurücksetzen anfordern (möglich nach " + RESET_HOURS + " Stunden)", function(){
+      r.delayUntil = Date.now() + RESET_HOURS * 3600000; saveLock(); render();
+      toast("Angefordert. Möglich ab " + whenText(r.delayUntil) + ".");
+    });
+    else if (Date.now() >= r.delayUntil) option("Jetzt zurücksetzen", recoverSuccess, true);
+    else {
+      d.appendChild(h("p", { class: "muted small", text: "Zurücksetzen angefordert, möglich ab " + whenText(r.delayUntil) + "." }));
+      option("Anforderung zurücknehmen", function(){ r.delayUntil = 0; saveLock(); render(); toast("Anforderung zurückgenommen"); });
+    }
+  }
+  option("Backup laden (ersetzt alle Daten)", function(){
+    ask("Ein gespeichertes Backup ersetzt alle Daten und schaltet die PIN aus. Was seit diesem Backup dazukam, geht verloren.", "Backup auswählen")
+      .then(function(ok){ if (ok) pickImportFile(); });
+  });
+  box.appendChild(h("button", { class: "btn quiet", type: "button", text: "Abbrechen", onclick: close }));
+  d.appendChild(box);
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+}
+function unbHex(hex){ var out = new Uint8Array(hex.length / 2); for (var i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16); return out; }
+
+var bioTried = false;
+/* Fragt die Entsperrung des Handys ab (Fingerabdruck, Gesicht oder Geräte-PIN); true bei Erfolg */
+function bioGet(){
+  if (!lock || !lock.rec.bio || !bioSupported()) return Promise.resolve(false);
+  try {
+    return navigator.credentials.get({ publicKey: { challenge: unbHex(randomHex(32)), timeout: 60000, userVerification: "required",
+      allowCredentials: [{ type: "public-key", id: unb64(lock.rec.bio.id), transports: ["internal"] }] } })
+      .then(function(res){ return !!res; }, function(){ return false; });
+  } catch (e) { return Promise.resolve(false); }
+}
+/* Normales Entsperren mit PIN oder Fingerabdruck */
+function unlockOk(){
+  var pending = lock.rec.delayUntil;
+  locked = false; wrongTries = 0; hiddenAt = 0;
+  if (pending) { lock.rec.delayUntil = 0; saveLock(); }
+  render();
+  if (pending) ask("Hinweis: Für diese App wurde ein Zurücksetzen der PIN angefordert. Da du dich regulär angemeldet hast, wurde die Anforderung verworfen. Warst du das nicht, hatte jemand anderes dein Handy in der Hand.", "Verstanden");
+}
+function renderLock(){
+  var pin = h("input", { class: "field", type: "password", inputmode: "numeric", autocomplete: "off", "aria-label": "PIN", maxlength: "12" });
+  app.appendChild(h("div", { class: "lock" },
+    h("h1", { text: "Merkbuch" }),
+    h("p", { class: "muted", text: "Gib deine PIN ein." }),
+    h("form", { onsubmit: function(ev){
+        ev.preventDefault();
+        if (waitSeconds()) return;
+        checkPin(pin.value).then(function(ok){
+          if (ok) { unlockOk(); return; }
+          pin.value = ""; pin.focus();
+          failedTry("Falsche PIN");
+        });
+      } },
+      pin, h("button", { class: "btn primary", type: "submit", text: "Entsperren" })),
+    lock.rec.bio && bioSupported() ? h("button", { class: "btn", type: "button", text: "Mit Fingerabdruck oder Gesicht entsperren", onclick: function(){
+      bioGet().then(function(ok){ if (ok && locked) unlockOk(); else if (!ok) toast("Das hat nicht geklappt. Nimm die PIN."); });
+    } }) : null,
+    h("button", { class: "btn quiet", type: "button", text: "PIN vergessen?", onclick: forgotDialog })));
+  if (lock.rec.delayUntil) app.querySelector(".lock").appendChild(h("p", { class: "muted small", text: Date.now() >= lock.rec.delayUntil
+    ? "Die Wartezeit ist um. Über „PIN vergessen?“ kannst du jetzt zurücksetzen."
+    : "Zurücksetzen angefordert, möglich ab " + whenText(lock.rec.delayUntil) + "." }));
+  pin.focus();
+  // Beim Erscheinen der Sperre einmal von selbst nach dem Fingerabdruck fragen
+  if (lock.rec.bio && bioSupported() && !bioTried) {
+    bioTried = true;
+    bioGet().then(function(ok){ if (ok && locked) unlockOk(); });
+  }
+}
+
+/* Überschrift, die einen Abschnitt der Einstellungen auf- und zuklappt */
+function foldHead(title, summary, box, isOpen, toggle){
+  var arrow = h("span", { "aria-hidden": "true", text: isOpen() ? "▾" : "▸" });
+  var btn = h("button", { class: "h2btn", type: "button", "aria-controls": box.id, "aria-expanded": isOpen() ? "true" : "false", onclick: function(){
+    toggle();
+    box.hidden = !isOpen();
+    arrow.textContent = isOpen() ? "▾" : "▸";
+    btn.setAttribute("aria-expanded", isOpen() ? "true" : "false");
+  } }, arrow, h("span", { text: title }), h("span", { class: "now", text: summary }));
+  box.hidden = !isOpen();
+  return h("h2", null, btn);
+}
+var secOpen = false, backupOpen = false, viewOpen = false, cmpOpen = false, resetOpen = false;
+
+/* Setzt die App nach zwei Rückfragen auf den Anfangszustand zurück */
+function resetAll(){
+  var n = state.people.length;
+  ask("Wirklich alles löschen? " + (n === 0 ? "Kategorien und Einstellungen" : n === 1 ? "1 Person, alle Kategorien und Einstellungen" : n + " Personen, alle Kategorien und Einstellungen") +
+    " werden auf den Anfangszustand zurückgesetzt." + (readDate(BACKUP_KEY) ? "" : " Du hast bisher kein Backup gespeichert."), "Weiter").then(function(ok){
+    if (!ok) return;
+    return ask("Letzte Rückfrage: Die Daten sind danach unwiederbringlich weg.", "Endgültig löschen").then(function(sure){
+      if (!sure) return;
+      try { [KEY, PREFS_KEY, DESIGN_KEY, LOCK_KEY, BACKUP_KEY, FIRST_KEY, "merkbuch.compare", "merkbuch.lockwait"].forEach(function(k){ localStorage.removeItem(k); }); } catch (e) {}
+      try { localStorage.setItem(FIRST_KEY, String(Date.now())); } catch (e) {}
+      state = freshState();
+      prefs = defaultPrefs();
+      design = { color: "beere", mode: "auto" };
+      lock = null; locked = false;
+      comparePeople = {}; comparePeopleSet = false; compareOn = {}; compareMode = "cols"; compareAllCats = false; compareAllPeople = false;
+      cardOpen = {}; settingsOpen = {}; archiveOpen = {}; fallbackJson = null;
+      secOpen = backupOpen = viewOpen = cmpOpen = resetOpen = catsOpen = designOpen = false;
+      applyDesign();
+      saveNow();          // räumt über die Speicherbereinigung auch die Bilder weg
+      go("people");
+      toast("Alles gelöscht");
+    });
+  });
+}
+
+/* ---------- Navigation ---------- */
+var app = document.getElementById("app");
+var view = "people";
+var currentPersonId = null;
+var query = "";
+var editMode = !!prefs.startEdit;   // false: nur ausgefüllte Kategorien, true: alle nicht ausgeblendeten
+var cardOpen = {};            // aufgeklappte Visitenkarten
+var compareOn = {};           // ausgewählte Kategorien im Vergleich
+var compareAllCats = false;   // im Vergleich alle Kategorien zeigen statt nur der häufigsten
+var comparePersonQuery = "";
+var compareAllPeople = false; // im Vergleich alle Personen zeigen statt nur der ersten
+var compareMode = "cols";     // "cols": Personen als Spalten, "rows": Personen als Zeilen
+try { if (localStorage.getItem("merkbuch.compare") === "rows") compareMode = "rows"; } catch (e) {}
+var comparePeople = {};       // ausgewählte Personen im Vergleich
+var comparePeopleSet = false; // true, sobald die Auswahl von Hand geändert wurde
+var navButtons = document.querySelectorAll("nav button");
+navButtons.forEach(function(b){
+  b.addEventListener("click", function(){ go(b.getAttribute("data-view")); });
+});
+
+function go(v, personId){
+  flushPending();
+  if (saveTimer) saveNow();
+  if (v === "people") editMode = !!prefs.startEdit;   // Personen öffnen sich in der eingestellten Startansicht
+  if (v === "person" && personId) {       // merken, wann die Person zuletzt geöffnet wurde
+    var opened = state.people.filter(function(x){ return x.id === personId; })[0];
+    if (opened) { opened.seen = Date.now(); saveNow(); }
+  }
+  view = v;
+  currentPersonId = personId || null;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function render(){
+  document.querySelector("nav").hidden = locked;
+  if (locked) { app.textContent = ""; flushers = []; renderLock(); return; }
+  var navView = view === "person" ? "people" : view;
+  navButtons.forEach(function(b){
+    if (b.getAttribute("data-view") === navView) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
+  app.textContent = "";
+  flushers = [];
+  if (!storageOk) app.appendChild(h("div", { class: "banner", text:
+    "Speichern auf diesem Gerät funktioniert gerade nicht. Sichere deine Eingaben über Einstellungen → Backup speichern." }));
+  if (view === "person") renderPerson();
+  else if (view === "compare") renderCompare();
+  else if (view === "settings") renderSettings();
+  else renderPeople();
+  app.querySelectorAll("textarea:not([data-fixed])").forEach(grow);
+}
+
+/* ---------- Personen ---------- */
+function renderPeople(){
+  app.appendChild(h("h1", { text: "Merkbuch" }));
+
+  var nameInput = h("input", { class: "field", type: "text", placeholder: "Name der neuen Person", "aria-label": "Name der neuen Person", autocomplete: "off",
+    onkeydown: function(ev){ if (ev.key === "Enter") addPerson(); } });
+  function addPerson(){
+    var name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); return; }
+    var p = { id: uid(), name: name, photo: "", card: cleanCard(null), updated: Date.now(), entries: {} };
+    state.people.push(p); saveNow();
+    go("person", p.id);
+    editMode = true; render();   // neue Person: gleich alle Kategorien zum Ausfüllen
+  }
+  app.appendChild(h("div", { class: "row" }, nameInput, h("button", { class: "btn primary", text: "Anlegen", onclick: addPerson })));
+
+  if (state.people.length === 0) {
+    app.appendChild(h("div", { class: "empty", text: "Noch keine Personen. Gib oben einen Namen ein und tippe auf „Anlegen“." }));
+    app.appendChild(loadButton());
+    return;
+  }
+
+  if (prefs.remind && daysSinceBackup() >= prefs.remind) {
+    var remind = h("div", { class: "banner" }, readDate(BACKUP_KEY)
+      ? "Dein letztes Backup ist " + daysSinceBackup() + " Tage alt. "
+      : "Du hast noch kein Backup gespeichert. ",
+      h("button", { class: "btn quiet", text: "Zu den Einstellungen", onclick: function(){ go("settings"); } }));
+    remind.style.marginTop = "12px";
+    app.appendChild(remind);
+  }
+  var list = h("ul", { class: "people" });
+  var search = h("input", { class: "field", type: "search", placeholder: "Suchen, z. B. Erdbeer oder Nuss", "aria-label": "In allen Personen suchen", value: query,
+    oninput: function(){ query = search.value; fillList(); } });
+  search.style.marginTop = "12px";
+  app.appendChild(search);
+  app.appendChild(list);
+  app.appendChild(loadButton());
+  function loadButton(){
+    var b = h("button", { class: "btn", text: "Person aus Datei laden", onclick: pickImportFile });
+    b.style.marginTop = "12px";
+    return b;
+  }
+
+  function fillList(){
+    list.textContent = "";
+    var q = query.trim().toLowerCase();
+    var shown = 0;
+    sortedPeople().forEach(function(p){
+      var meta = [];
+      if (q) {
+        var nameHit = displayName(p).toLowerCase().indexOf(q) !== -1;
+        var hits = [];
+        visibleCats().forEach(function(c){
+          var e = entryOf(p, c);
+          var all = entryLine(e);
+          if (all.toLowerCase().indexOf(q) !== -1) hits.push(h("span", { class: "meta hit" }, h("b", { text: catName(c) + ": " }), all));
+        });
+        var cardText = cardLines(p).join(", ");
+        if (cardText.toLowerCase().indexOf(q) !== -1) hits.push(h("span", { class: "meta hit" }, h("b", { text: "Visitenkarte: " }), cardText));
+        if (!nameHit && hits.length === 0) return;
+        meta = hits.slice(0, 4);
+        if (hits.length > 4) meta.push(h("span", { class: "meta", text: "und " + (hits.length - 4) + " weitere Treffer" }));
+      } else {
+        var filled = visibleCats().filter(function(c){ return isFilled(p, c); }).length;
+        meta = [h("span", { class: "meta", text: filled === 0 ? "Noch nichts eingetragen" : filled === 1 ? "1 Kategorie ausgefüllt" : filled + " Kategorien ausgefüllt" })];
+        if (prefs.sort === "birthday" && daysToBirthday(p) !== null) meta.unshift(h("span", { class: "meta", text: birthdayText(p) }));
+      }
+      shown++;
+      var body = h("span", null, h("span", { class: "name", text: displayName(p) }));
+      meta.forEach(function(m){ body.appendChild(m); });
+      list.appendChild(h("li", null, h("button", { class: "person", onclick: function(){ go("person", p.id); } }, avatar(p), body)));
+    });
+    if (shown === 0) list.appendChild(h("li", { class: "empty", text: "Kein Treffer für „" + query.trim() + "“." }));
+  }
+  fillList();
+}
+
+/* ---------- Eine Person ---------- */
+function renderPerson(){
+  var p = state.people.filter(function(x){ return x.id === currentPersonId; })[0];
+  if (!p) { view = "people"; renderPeople(); return; }
+
+  app.appendChild(h("div", { class: "topbar" },
+    h("button", { class: "btn quiet", text: "‹ Alle Personen", onclick: function(){ go("people"); } })
+  ));
+  app.appendChild(h("button", { class: "fab", type: "button", icon: editMode ? CHECK_ICON : PENCIL_ICON, "aria-pressed": editMode ? "true" : "false",
+    "aria-label": editMode ? "Bearbeiten beenden" : "Bearbeiten: alle Kategorien zeigen", title: editMode ? "Fertig" : "Bearbeiten",
+    onclick: function(){ flushPending(); editMode = !editMode; render(); } }));
+
+  // Visitenkarte: klappt über das Symbol neben dem Namen auf
+  var vcard = h("div", { class: "card vcard", id: "vcard", hidden: !cardOpen[p.id] }, h("h3", { text: "Visitenkarte" }));
+  CARD_FIELDS.forEach(function(f){
+    var id = "card-" + f[0], value = cardOf(p)[f[0]];
+    var input = f[2] === "area"
+      ? h("textarea", { class: "field", rows: "2", id: id, value: value })
+      : h("input", { class: "field", type: f[2], id: id, autocomplete: "off", value: value });
+    input.addEventListener("input", function(){
+      cardOf(p)[f[0]] = input.value;
+      if (f[2] === "area") grow(input);
+      saveSoon();
+    });
+    vcard.appendChild(h("label", { for: id, text: f[1] }));
+    vcard.appendChild(input);
+    if (f[0] === "address") {
+      var map = h("a", { class: "maplink", target: "_blank", rel: "noopener noreferrer", text: "In Google Maps öffnen" });
+      var setMap = function(){
+        var a = input.value.replace(/\s+/g, " ").trim();
+        map.hidden = !a;
+        if (a) map.href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(a);
+      };
+      input.addEventListener("input", setMap);
+      setMap();
+      vcard.appendChild(map);
+    }
+  });
+  // weitere, selbst benannte Felder über ein kleines +
+  var extraBox = h("div");
+  function drawExtra(focusLast){
+    extraBox.textContent = "";
+    var card = cardOf(p);
+    if (!card.extra) card.extra = [];
+    card.extra.forEach(function(x){
+      var lab = h("input", { class: "field lab", type: "text", placeholder: "Bezeichnung", "aria-label": "Bezeichnung", autocomplete: "off", value: x.label,
+        oninput: function(){ x.label = lab.value; saveSoon(); } });
+      var val = h("input", { class: "field val", type: "text", placeholder: "Angabe", "aria-label": "Angabe", autocomplete: "off", value: x.value,
+        oninput: function(){ x.value = val.value; saveSoon(); } });
+      extraBox.appendChild(h("div", { class: "extrarow" }, lab, val,
+        h("button", { class: "btn icon danger", type: "button", text: "✕", "aria-label": "Feld entfernen", onclick: function(){
+          card.extra.splice(card.extra.indexOf(x), 1); saveNow(); drawExtra();
+        } })));
+      if (focusLast && x === card.extra[card.extra.length - 1]) lab.focus();
+    });
+  }
+  drawExtra();
+  vcard.appendChild(extraBox);
+  vcard.appendChild(h("button", { class: "btn quiet addfield", type: "button", text: "+", "aria-label": "Weiteres Feld hinzufügen", title: "Weiteres Feld hinzufügen",
+    onclick: function(){
+      var card = cardOf(p);
+      if (!card.extra) card.extra = [];
+      card.extra.push({ id: uid(), label: "", value: "" });
+      drawExtra(true);
+    } }));
+  var cardBtn = h("button", { class: "btn icon", type: "button", icon: CARD_ICON, "aria-label": "Visitenkarte", title: "Visitenkarte",
+    "aria-expanded": cardOpen[p.id] ? "true" : "false", "aria-controls": "vcard",
+    onclick: function(){
+      cardOpen[p.id] = !cardOpen[p.id];
+      vcard.hidden = !cardOpen[p.id];
+      cardBtn.setAttribute("aria-expanded", cardOpen[p.id] ? "true" : "false");
+      if (cardOpen[p.id]) vcard.querySelectorAll("textarea").forEach(grow);
+    } });
+
+  var name = h("input", { class: "field namefield", type: "text", value: p.name, placeholder: "Name", "aria-label": "Name", autocomplete: "off",
+    oninput: function(){ p.name = name.value; saveSoon(); } });
+  app.appendChild(h("div", { class: "row personhead" },
+    h("button", { class: "photobtn", type: "button", "aria-label": p.photo ? "Foto ändern" : "Foto hinzufügen", title: p.photo ? "Foto ändern" : "Foto hinzufügen",
+      onclick: function(){ photoDialog(p); } }, avatar(p, true)),
+    name, cardBtn));
+  app.appendChild(vcard);
+
+  app.appendChild(h("div", { class: "actions" + (editMode ? "" : " end") },
+    editMode ? h("p", { class: "muted small", text: "Eingaben werden automatisch gespeichert." }) : null,
+    h("div", { class: "row" },
+      h("button", { class: "btn icon", icon: COPY_ICON, "aria-label": "Alles kopieren", title: "Alles kopieren", onclick: function(){
+        flushPending();
+        copyText(personText(p), "Bei dieser Person ist noch nichts eingetragen");
+      } }),
+      h("button", { class: "btn icon", icon: SAVE_ICON, "aria-label": "Person als Datei speichern", title: "Person als Datei speichern", onclick: function(){
+        flushPending();
+        exportPerson(p);
+      } }))));
+
+  // Normal: nur ausgefüllte Kategorien. Bearbeiten: alle, die nicht ausgeblendet sind.
+  var cats = visibleCats();
+  var shown = editMode ? cats : cats.filter(function(c){ return isFilled(p, c); });
+  if (!shown.length) {
+    app.appendChild(h("div", { class: "empty", text: state.categories.length === 0 ? "Es gibt keine Kategorien. Lege unter Einstellungen welche an."
+      : editMode ? "Alle Kategorien sind ausgeblendet. Blende unter Einstellungen welche ein."
+      : "Noch nichts eingetragen. Tippe unten rechts auf den Stift, um alle Kategorien zu sehen." }));
+  } else if (editMode) {
+    app.appendChild(h("p", { class: "muted small", text:
+      "Notizen: „Titel: Beschreibung“ eintippen und Enter drücken. Der Doppelpunkt trennt beides, ein eingefügter Link wird automatisch hinterlegt. Ab zwei Buchstaben erscheinen Vorschläge zum Antippen." }));
+  }
+
+  shown.forEach(function(c){
+    var card = h("section", { class: "card" },
+      h("div", { class: "cardhead" }, h("h3", { text: catName(c) }),
+        h("button", { class: "btn quiet", icon: COPY_ICON, "aria-label": catName(c) + " kopieren", title: catName(c) + " kopieren", onclick: function(){
+          flushPending();
+          copyText(categoryText(p, c), "Hier ist noch nichts eingetragen");
+        } })));
+    if (hasDetail(c) && c.subs.length) {
+      card.appendChild(rankedBlock(p, c));
+    } else if (c.subs.length) {
+      var chips = h("div", { class: "chips" });
+      c.subs.forEach(function(s){
+        var e0 = p.entries[c.id];
+        var on = !!e0 && e0.subs.indexOf(s.id) !== -1;
+        var chip = h("button", { class: "chip", "aria-pressed": on ? "true" : "false", text: s.name.trim() || "Ohne Titel",
+          onclick: function(){
+            var e = editableEntry(p, c.id);
+            var i = e.subs.indexOf(s.id);
+            if (i === -1) e.subs.push(s.id); else e.subs.splice(i, 1);
+            chip.setAttribute("aria-pressed", i === -1 ? "true" : "false");
+            saveNow();
+          } });
+        chips.appendChild(chip);
+      });
+      card.appendChild(chips);
+    }
+    card.appendChild(notesBlock(
+      function(){ var e = p.entries[c.id]; return e && e.notes ? e.notes : []; },
+      function(){ return editableEntry(p, c.id).notes; },
+      "Titel: Beschreibung",
+      catName(c) + ": neue Notiz",
+      function(){ return suggestionsFor(c, null); },
+      c.kind === "geschenk" ? p.id + ":" + c.id : ""));
+    app.appendChild(card);
+  });
+
+  if (editMode) {
+    var del = h("button", { class: "btn danger", text: "Person löschen", onclick: function(){
+      ask("„" + displayName(p) + "“ mit allen Einträgen löschen?", "Löschen").then(function(ok){
+        if (!ok) return;
+        state.people = state.people.filter(function(x){ return x.id !== p.id; });
+        saveNow(); go("people"); toast("Person gelöscht");
+      });
+    } });
+    del.style.marginTop = "12px";
+    app.appendChild(del);
+  }
+}
+
+/* Auswahl über +: jede gewählte Unterkategorie bekommt eigene Notizen; mit Rangfolge zusätzlich Platznummer und Pfeile */
+function rankedBlock(p, c){
+  var box = h("div");
+  function draw(){
+    box.textContent = "";
+    var e = p.entries[c.id];
+    if (e) e.subs = e.subs.filter(function(id){ return !!subById(c, id); });
+    var chosen = !e ? [] : c.ranked ? e.subs.map(function(id){ return subById(c, id); })
+      : c.subs.filter(function(s){ return e.subs.indexOf(s.id) !== -1; });
+
+    chosen.forEach(function(s, i){
+      var note = notesBlock(
+        function(){ var en = p.entries[c.id]; return en && en.subNotes && en.subNotes[s.id] ? en.subNotes[s.id] : []; },
+        function(){ var en = editableEntry(p, c.id); if (!en.subNotes[s.id]) en.subNotes[s.id] = []; return en.subNotes[s.id]; },
+        "Titel: Beschreibung", "Neue Notiz zu " + subName(s),
+        function(){ return suggestionsFor(c, s); });
+      box.appendChild(h("div", { class: "rank" },
+        h("div", { class: "rankhead" },
+          c.ranked ? h("span", { class: "ranknum", text: String(i + 1), "aria-label": "Platz " + (i + 1) }) : null,
+          h("span", { class: "rankname", text: subName(s) }),
+          c.ranked ? h("button", { class: "btn icon", text: "↑", "aria-label": subName(s) + " einen Platz nach oben", disabled: i === 0,
+            onclick: function(){ shift(i, -1); } }) : null,
+          c.ranked ? h("button", { class: "btn icon", text: "↓", "aria-label": subName(s) + " einen Platz nach unten", disabled: i === chosen.length - 1,
+            onclick: function(){ shift(i, 1); } }) : null,
+          h("button", { class: "btn icon danger", text: "✕", "aria-label": subName(s) + " abwählen",
+            onclick: function(){
+              var en = editableEntry(p, c.id), at = en.subs.indexOf(s.id);
+              if (at !== -1) en.subs.splice(at, 1);
+              saveNow(); draw();
+            } })
+        ),
+        note));
+    });
+
+    var rest = c.subs.filter(function(s){ return chosen.indexOf(s) === -1; });
+    if (chosen.length === 0) box.appendChild(h("p", { class: "muted small", text: c.ranked ? "Tippe an, was passt. Die Reihenfolge ist die Rangfolge, Platz 1 steht oben." : "Tippe an, was passt." }));
+    if (rest.length) {
+      var chips = h("div", { class: "chips" });
+      rest.forEach(function(s){
+        chips.appendChild(h("button", { class: "chip", text: "+ " + subName(s), "aria-label": subName(s) + " auswählen",
+          onclick: function(){ editableEntry(p, c.id).subs.push(s.id); saveNow(); draw(); } }));
+      });
+      box.appendChild(chips);
+    }
+  }
+  function shift(i, dir){
+    var a = editableEntry(p, c.id).subs, j = i + dir;
+    if (j < 0 || j >= a.length) return;
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+    saveNow(); draw();
+  }
+  draw();
+  return box;
+}
+
+/* Notizen nur zum Lesen, Links anklickbar */
+function readPoints(notes){
+  var ul = h("ul", { class: "readpoints" });
+  notes.forEach(function(n){
+    var li = h("li", null, h("b", { text: n.title }));
+    if (n.desc) li.appendChild(h("span", { class: "readdesc", text: n.desc }));
+    if (n.url) li.appendChild(h("a", { href: n.url, target: "_blank", rel: "noopener noreferrer", text: "Link öffnen" }));
+    ul.appendChild(li);
+  });
+  return ul;
+}
+
+/* ---------- Vergleichen ---------- */
+/* Was eine Person in einer Kategorie eingetragen hat, zum Lesen */
+function entryView(p, cat){
+  var e = entryOf(p, cat), box = h("div");
+  if (e.detail && e.items.length) {
+    var ol = h(e.ranked ? "ol" : "ul", { class: "ranklist" });
+    e.items.forEach(function(it){
+      var li = h("li", null, h("b", { text: it.name }));
+      if (it.notes.length) li.appendChild(readPoints(it.notes));
+      ol.appendChild(li);
+    });
+    box.appendChild(ol);
+  } else if (e.subs.length) {
+    var tags = h("div");
+    e.subs.forEach(function(s){ tags.appendChild(h("span", { class: "tag", text: s })); });
+    box.appendChild(tags);
+  }
+  if (e.notes.length) box.appendChild(readPoints(e.notes));
+  if (!e.subs.length && !e.notes.length) box.appendChild(h("div", { class: "muted", text: e.archive.length ? "Keine offenen Wünsche" : "Noch nichts eingetragen" }));
+  if (e.archive.length) box.appendChild(h("div", { class: "muted small", text: e.archive.length + " im Geschenkarchiv" }));
+  return box;
+}
+
+/* Auswahl per Antippen. shown() liefert, was gerade zu sehen ist.
+   „Alle auswählen“ wählt das Sichtbare, „Keine auswählen“ leert die ganze Auswahl. */
+function chipGroup(all, shown, label, isOn, setOn, changed, more){
+  var chips = h("div", { class: "chips" });
+  function draw(){
+    chips.textContent = "";
+    var items = shown();
+    items.forEach(function(it){
+      var chip = h("button", { class: "chip", "aria-pressed": isOn(it) ? "true" : "false", text: label(it),
+        onclick: function(){
+          setOn(it, !isOn(it));
+          chip.setAttribute("aria-pressed", isOn(it) ? "true" : "false");
+          changed();
+        } });
+      chips.appendChild(chip);
+    });
+    if (!items.length) chips.appendChild(h("span", { class: "muted small chipnote", text: "Kein Treffer" }));
+    // weitere Einträge über einen kleinen Knopf am Ende: „+12“ zeigt alle, „−“ klappt wieder ein
+    if (more && (more.isOpen() || more.rest() > 0)) {
+      var open = more.isOpen();
+      chips.appendChild(h("button", { class: "chip morechip", type: "button", text: open ? "−" : "+" + more.rest(),
+        "aria-label": open ? "Weniger anzeigen" : more.rest() + " weitere anzeigen", title: open ? "Weniger anzeigen" : "Alle anzeigen",
+        onclick: function(){ more.toggle(); draw(); } }));
+    }
+  }
+  draw();
+  var node = h("div", null, chips, h("div", { class: "row" },
+    h("button", { class: "btn", text: "Alle auswählen", onclick: function(){ shown().forEach(function(it){ setOn(it, true); }); draw(); changed(); } }),
+    h("button", { class: "btn", text: "Keine auswählen", onclick: function(){ all.forEach(function(it){ setOn(it, false); }); draw(); changed(); } })));
+  return { node: node, draw: draw };
+}
+
+/* Diese Kategorien stehen im Vergleich von Anfang an zur Auswahl, in dieser Reihenfolge; alle anderen kommen über das + */
+var COMPARE_FIRST = ["ernaehrung", "mag", "magnicht", "allergien", "suess", "kuchen", "pizza"];
+
+/* Die Kategorien, die im Vergleich von Anfang an zur Auswahl stehen: selbst festgelegt oder die Vorgabe */
+function compareFirstCats(allCats){
+  var out = [];
+  if (prefs.cmpCats) {
+    prefs.cmpCats.forEach(function(id){
+      var c = allCats.filter(function(x){ return x.id === id; })[0];
+      if (c && out.indexOf(c) === -1) out.push(c);
+    });
+  } else {
+    COMPARE_FIRST.forEach(function(kind){
+      var c = allCats.filter(function(x){ return x.kind === kind; })[0];
+      if (c) out.push(c);
+    });
+  }
+  return out;
+}
+
+function renderCompare(){
+  app.appendChild(h("h1", { text: "Vergleichen" }));
+  if (state.people.length === 0 || state.categories.length === 0) {
+    app.appendChild(h("div", { class: "empty", text: state.people.length === 0
+      ? "Lege zuerst unter „Personen“ jemanden an."
+      : "Es gibt keine Kategorien. Lege unter Einstellungen welche an." }));
+    return;
+  }
+  var allCats = visibleCats();
+  if (!allCats.length) { app.appendChild(h("div", { class: "empty", text: "Alle Kategorien sind ausgeblendet. Blende unter Einstellungen welche ein." })); return; }
+  var first = compareFirstCats(allCats);
+  if (!first.length) first = allCats.slice(0, 6);   // falls keine davon (mehr) vorhanden ist
+  var cats = first.concat(allCats.filter(function(c){ return first.indexOf(c) === -1; }));
+  var TOP = first.length, top = { first: first[0].id };
+  first.forEach(function(c){ top[c.id] = true; });
+  if (!cats.some(function(c){ return compareOn[c.id]; })) {
+    compareOn = {};
+    compareOn[top.first] = true;
+  }
+  var people = state.people.slice().sort(byName);
+  var results = h("div");
+
+  // Kategorien: zuerst nur die häufigsten, der Rest über das + am Ende. Ausgewählte bleiben immer sichtbar.
+  function shownCats(){ return compareAllCats ? cats : cats.filter(function(c){ return top[c.id] || compareOn[c.id]; }); }
+  var catGroup = chipGroup(cats, shownCats, catName,
+    function(c){ return !!compareOn[c.id]; },
+    function(c, on){ if (on) compareOn[c.id] = true; else delete compareOn[c.id]; },
+    fillResults,
+    { isOpen: function(){ return compareAllCats && cats.length > TOP; },
+      rest: function(){ return cats.length - shownCats().length; },
+      toggle: function(){ compareAllCats = !compareAllCats; } });
+  app.appendChild(h("h2", { text: "Kategorien" })).style.marginTop = "0";
+  app.appendChild(catGroup.node);
+
+  // Personen: zuerst nur die zuletzt geöffneten oder bearbeiteten (höchstens fünf, bei langen Namen weniger), der Rest über das +.
+  // Ausgewählte bleiben immer sichtbar; die Suche zeigt alle Treffer.
+  var recent = [], width = 0;
+  function lastUsed(p){ return Math.max(p.seen || 0, p.updated || 0); }
+  people.slice().sort(function(a, b){ return lastUsed(b) - lastUsed(a) || byName(a, b); }).some(function(p){
+    var w = displayName(p).length + 6;                 // grobe Breite eines Namens samt Rand und Haken
+    if (recent.length && (recent.length >= prefs.cmpPeople || width + w > 15 * prefs.cmpPeople)) return true;
+    recent.push(p); width += w;
+    return false;
+  });
+  // Solange niemand von Hand ausgewählt wurde, sind genau die zuletzt geöffneten ausgewählt
+  if (!comparePeopleSet || !people.some(function(p){ return comparePeople[p.id]; })) {
+    comparePeopleSet = false;
+    comparePeople = {};
+    recent.forEach(function(p){ comparePeople[p.id] = true; });
+  }
+  function personQuery(){ return comparePersonQuery.trim().toLowerCase(); }
+  function shownPeople(){
+    var q = personQuery();
+    if (q) return people.filter(function(p){ return displayName(p).toLowerCase().indexOf(q) !== -1; });
+    if (compareAllPeople) return people;
+    return recent.concat(people.filter(function(p){ return recent.indexOf(p) === -1 && comparePeople[p.id]; }));
+  }
+  var personGroup = chipGroup(people, shownPeople, displayName,
+    function(p){ return !!comparePeople[p.id]; },
+    function(p, on){ comparePeopleSet = true; if (on) comparePeople[p.id] = true; else delete comparePeople[p.id]; },
+    fillResults,
+    { isOpen: function(){ return compareAllPeople && !personQuery() && people.length > recent.length; },
+      rest: function(){ return personQuery() ? 0 : people.length - shownPeople().length; },
+      toggle: function(){ compareAllPeople = !compareAllPeople; } });
+  var personSearch = h("input", { class: "field cmpsearch", type: "search", placeholder: "Person suchen", "aria-label": "Person suchen", value: comparePersonQuery,
+    oninput: function(){ comparePersonQuery = personSearch.value; personGroup.draw(); } });
+  app.appendChild(h("h2", { text: "Personen" }));
+  app.appendChild(personSearch);
+  app.appendChild(personGroup.node);
+
+  app.appendChild(h("h2", { text: "Darstellung" }));
+  var modes = [["cols", "Personen als Spalten"], ["rows", "Personen als Zeilen"]], modeNodes = [];
+  var modeChips = h("div", { class: "chips" });
+  modes.forEach(function(m){
+    var chip = h("button", { class: "chip", "aria-pressed": compareMode === m[0] ? "true" : "false", text: m[1],
+      onclick: function(){
+        compareMode = m[0];
+        try { localStorage.setItem("merkbuch.compare", compareMode); } catch (e) {}
+        modeNodes.forEach(function(x){ x.node.setAttribute("aria-pressed", x.mode === compareMode ? "true" : "false"); });
+        fillResults();
+      } });
+    modeNodes.push({ mode: m[0], node: chip });
+    modeChips.appendChild(chip);
+  });
+  app.appendChild(modeChips);
+  app.appendChild(results);
+
+  function fillResults(){
+    results.textContent = "";
+    var chosenCats = cats.filter(function(c){ return compareOn[c.id]; });
+    var chosenPeople = people.filter(function(p){ return comparePeople[p.id]; });
+    if (!chosenCats.length || !chosenPeople.length) {
+      results.appendChild(h("p", { class: "empty", text: !chosenCats.length ? "Wähle oben mindestens eine Kategorie aus." : "Wähle oben mindestens eine Person aus." }));
+      return;
+    }
+    // Spalten: je Kategorie ein Block mit den Personen nebeneinander. Zeilen: je Person ein Block mit den Kategorien nebeneinander.
+    var byCols = compareMode === "cols";
+    var outer = byCols ? chosenCats : chosenPeople, inner = byCols ? chosenPeople : chosenCats;
+    if (inner.length >= 3) results.appendChild(h("p", { class: "muted small", text:
+      "Seitlich wischen, um weitere " + (byCols ? "Personen" : "Kategorien") + " zu sehen." })).style.margin = "14px 0 0";
+    outer.forEach(function(o){
+      results.appendChild(h("h3", { class: "cmphead", text: byCols ? catName(o) : displayName(o) }));
+      var block = h("div", { class: "card cols", tabindex: "0", "aria-label": (byCols ? catName(o) : displayName(o)) + ": Vergleich" });
+      inner.forEach(function(i){
+        var p = byCols ? i : o, c = byCols ? o : i;
+        block.appendChild(h("div", { class: "result" }, h("div", { class: "who", text: byCols ? displayName(p) : catName(c) }), entryView(p, c)));
+      });
+      results.appendChild(block);
+    });
+  }
+  fillResults();
+}
+
+/* ---------- Einstellungen: Kategorien + Backup ---------- */
+var fallbackJson = null;   // Backup-Text, falls kein Datei-Download möglich ist
+
+function renderSettings(){
+  app.appendChild(h("h1", { text: "Einstellungen" }));
+
+  // Design: eingeklappt, die aktuelle Wahl steht daneben
+  var designBox = h("div", { id: "designbox", hidden: !designOpen });
+  var designNow = h("span", { class: "now" });
+  var designArrow = h("span", { "aria-hidden": "true" });
+  function drawDesignHead(){
+    var modes = { auto: "wie das Handy", light: "hell", dark: "dunkel" };
+    designArrow.textContent = designOpen ? "▾" : "▸";
+    designNow.textContent = THEMES[design.color].label + ", " + modes[design.mode];
+    designToggle.setAttribute("aria-expanded", designOpen ? "true" : "false");
+  }
+  var designToggle = h("button", { class: "h2btn", type: "button", "aria-controls": "designbox", onclick: function(){
+    designOpen = !designOpen;
+    designBox.hidden = !designOpen;
+    drawDesignHead();
+  } }, designArrow, h("span", { text: "Design" }), designNow);
+  drawDesignHead();
+  app.appendChild(h("h2", null, designToggle)).style.marginTop = "0";
+  function choice(labelText, key, options){
+    var box = h("div", { class: "chips", role: "group", "aria-label": labelText }), nodes = [];
+    options.forEach(function(o){
+      var chip = h("button", { class: "chip", "aria-pressed": design[key] === o[0] ? "true" : "false",
+        onclick: function(){
+          setDesign(key, o[0]);
+          drawDesignHead();
+          nodes.forEach(function(x){ x.node.setAttribute("aria-pressed", x.value === o[0] ? "true" : "false"); });
+        } });
+      if (o[2]) { var dot = h("span", { class: "swatch" }); dot.style.background = o[2]; chip.appendChild(dot); }
+      chip.appendChild(document.createTextNode(o[1]));
+      nodes.push({ value: o[0], node: chip });
+      box.appendChild(chip);
+    });
+    designBox.appendChild(h("p", { class: "small", text: labelText })).style.margin = "0 0 6px";
+    designBox.appendChild(box);
+  }
+  choice("Farbe", "color", Object.keys(THEMES).map(function(k){ return [k, THEMES[k].label, THEMES[k].swatch]; }));
+  choice("Helligkeit", "mode", [["auto", "Wie das Handy"], ["light", "Hell"], ["dark", "Dunkel"]]);
+  app.appendChild(designBox);
+
+  /* Auswahl einer Einstellung aus wenigen Möglichkeiten */
+  function pick(box, labelText, current, options, set){
+    box.appendChild(h("p", { class: "small", text: labelText })).style.margin = "0 0 6px";
+    var chips = h("div", { class: "chips", role: "group", "aria-label": labelText });
+    options.forEach(function(o){
+      chips.appendChild(h("button", { class: "chip", type: "button", text: o[1], "aria-pressed": current === o[0] ? "true" : "false",
+        onclick: function(){ set(o[0]); render(); } }));
+    });
+    box.appendChild(chips);
+  }
+
+  // Ansicht
+  var viewBox = h("div", { id: "viewbox", class: "fold" });
+  var sortNames = { name: "nach Name", recent: "zuletzt geöffnet zuerst", birthday: "nach Geburtstag" };
+  app.appendChild(foldHead("Ansicht", (prefs.startEdit ? "öffnet im Bearbeiten-Modus" : "öffnet normal") + ", " + sortNames[prefs.sort], viewBox,
+    function(){ return viewOpen; }, function(){ viewOpen = !viewOpen; }));
+  app.appendChild(viewBox);
+  pick(viewBox, "Personen öffnen sich", prefs.startEdit, [[false, "Normal (nur Ausgefülltes)"], [true, "Im Bearbeiten-Modus"]],
+    function(v){ setPref("startEdit", v); editMode = v; });
+  pick(viewBox, "Personenliste sortieren", prefs.sort, [["name", "Nach Name"], ["recent", "Zuletzt geöffnet zuerst"], ["birthday", "Nächster Geburtstag zuerst"]],
+    function(v){ setPref("sort", v); });
+  pick(viewBox, "Wortvorschläge beim Tippen", prefs.suggest, [[true, "An"], [false, "Aus"]], function(v){ setPref("suggest", v); });
+
+  // Kategorien: ebenfalls eingeklappt, mit kurzer Zusammenfassung daneben
+  var catsBox = h("div", { id: "catsbox", hidden: !catsOpen });
+  var catsArrow = h("span", { "aria-hidden": "true", text: catsOpen ? "▾" : "▸" });
+  var hiddenCount = state.categories.filter(function(c){ return c.hidden; }).length;
+  var catsToggle = h("button", { class: "h2btn", type: "button", "aria-controls": "catsbox", "aria-expanded": catsOpen ? "true" : "false", onclick: function(){
+    catsOpen = !catsOpen;
+    catsBox.hidden = !catsOpen;
+    catsArrow.textContent = catsOpen ? "▾" : "▸";
+    catsToggle.setAttribute("aria-expanded", catsOpen ? "true" : "false");
+  } }, catsArrow, h("span", { text: "Kategorien" }),
+    h("span", { class: "now", text: (state.categories.length - hiddenCount) + " eingeblendet" + (hiddenCount ? ", " + hiddenCount + " ausgeblendet" : "") }));
+  app.appendChild(h("h2", null, catsToggle));
+  app.appendChild(catsBox);
+  catsBox.appendChild(h("p", { class: "muted small", text: "Die Reihenfolge änderst du mit den Pfeilen oder am Handy, indem du eine Kategorie gedrückt hältst und dann ziehst. Das Auge blendet eine Kategorie aus: Sie erscheint dann nirgends in der App, ihre Einträge bleiben aber gespeichert. Unterkategorien klappst du pro Kategorie auf. „Löschen“ entfernt eine Kategorie endgültig bei allen Personen." }));
+
+  function drawGroup(list){ var box = h("div", { class: "catgroup" }); catsBox.appendChild(box); list.forEach(function(c, index){
+    var card = h("section", { class: "card catcard" + (c.hidden ? " off" : ""), "data-id": c.id });
+    enableDrag(card, box, list);
+    var name = h("input", { class: "field", type: "text", value: c.name, placeholder: "Name der Kategorie", "aria-label": "Name der Kategorie", autocomplete: "off",
+      oninput: function(){ c.name = name.value; saveSoon(); } });
+    var eye = h("button", { class: "btn icon", type: "button", onclick: function(){
+      c.hidden = !c.hidden;
+      if (!c.hidden) {   // frisch eingeblendete stehen am Ende der Liste
+        state.categories = state.categories.filter(function(x){ return x !== c; });
+        state.categories.push(c);
+      }
+      saveNow();
+      render();
+      toast(c.hidden ? "Ausgeblendet, steht jetzt unten" : "Eingeblendet, steht jetzt am Ende der Liste");
+    } });
+    function drawEye(){
+      var text = catName(c) + (c.hidden ? " ist ausgeblendet. Einblenden" : " ausblenden");
+      eye.innerHTML = c.hidden ? EYE_OFF_ICON : EYE_ICON;
+      eye.setAttribute("aria-label", text);
+      eye.setAttribute("title", c.hidden ? "Ausgeblendet" : "Ausblenden");
+      eye.setAttribute("aria-pressed", c.hidden ? "true" : "false");
+    }
+    drawEye();
+    card.appendChild(h("div", { class: "row" },
+      name,
+      h("button", { class: "btn icon", text: "↑", "aria-label": "Nach oben", disabled: index === 0,
+        onclick: function(){ move(c, -1); } }),
+      h("button", { class: "btn icon", text: "↓", "aria-label": "Nach unten", disabled: index === list.length - 1,
+        onclick: function(){ move(c, 1); } }),
+      eye
+    ));
+
+    // Unterkategorien, Rangfolge und Löschen klappen erst auf Wunsch auf
+    var body = h("div", { class: "catbody", hidden: !settingsOpen[c.id] });
+    var more = h("button", { class: "btn quiet morebtn", type: "button", onclick: function(){
+      settingsOpen[c.id] = !settingsOpen[c.id];
+      body.hidden = !settingsOpen[c.id];
+      drawMore();
+    } });
+    function drawMore(){
+      more.textContent = (settingsOpen[c.id] ? "▾ " : "▸ ") + "Unterkategorien (" + c.subs.length + ")";
+      more.setAttribute("aria-expanded", settingsOpen[c.id] ? "true" : "false");
+    }
+    drawMore();
+    var line = h("div", { class: "catline" }, more);
+    card.appendChild(line);
+    card.appendChild(body);
+
+    var subsBox = h("div", { class: "indent" });
+    c.subs.forEach(function(s){
+      var sin = h("input", { class: "field", type: "text", value: s.name, placeholder: "Unterkategorie", "aria-label": "Name der Unterkategorie", autocomplete: "off",
+        oninput: function(){ s.name = sin.value; saveSoon(); } });
+      subsBox.appendChild(h("div", { class: "subrow" }, sin,
+        h("button", { class: "btn icon danger", text: "✕", "aria-label": "Unterkategorie „" + (s.name || "Ohne Titel") + "“ löschen",
+          onclick: function(){
+            ask("Unterkategorie „" + (s.name.trim() || "Ohne Titel") + "“ löschen? Die Kreuze bei allen Personen gehen verloren.", "Löschen").then(function(ok){
+              if (!ok) return;
+              c.subs = c.subs.filter(function(x){ return x.id !== s.id; });
+              state.people.forEach(function(p){
+                var e = p.entries[c.id];
+                if (e) { e.subs = e.subs.filter(function(id){ return id !== s.id; }); if (e.subNotes) delete e.subNotes[s.id]; }
+              });
+              saveNow(); render();
+            });
+          } })));
+    });
+    var newSub = h("input", { class: "field", type: "text", placeholder: "Neue Unterkategorie", "aria-label": "Neue Unterkategorie für " + catName(c), autocomplete: "off",
+      onkeydown: function(ev){ if (ev.key === "Enter") addSub(); } });
+    function addSub(){
+      var v = newSub.value.trim();
+      if (!v) { newSub.focus(); return; }
+      c.subs.push({ id: uid(), name: v }); saveNow(); render();
+    }
+    subsBox.appendChild(h("div", { class: "subrow" }, newSub, h("button", { class: "btn", text: "Hinzufügen", onclick: addSub })));
+    body.appendChild(subsBox);
+
+    var detailBox = h("input", { type: "checkbox", onchange: function(){
+      c.detail = detailBox.checked;
+      if (!c.detail) { c.ranked = false; rankBox.checked = false; }
+      saveNow();
+    } });
+    var rankBox = h("input", { type: "checkbox", onchange: function(){
+      c.ranked = rankBox.checked;
+      if (c.ranked) { c.detail = true; detailBox.checked = true; }
+      saveNow();
+    } });
+    detailBox.checked = hasDetail(c);
+    rankBox.checked = !!c.ranked;
+    body.appendChild(h("label", { class: "check small" }, detailBox, "Auswahl über + mit eigenen Notizen je Unterkategorie"));
+    body.appendChild(h("label", { class: "check small" }, rankBox, "Zusätzlich mit Rangfolge"));
+
+    line.appendChild(h("button", { class: "btn quiet danger morebtn", type: "button", text: "Löschen", "aria-label": "Kategorie " + catName(c) + " löschen", onclick: function(){
+      var filled = state.people.filter(function(p){ return isFilled(p, c); }).length;
+      ask("Kategorie „" + catName(c) + "“ endgültig löschen? Sie verschwindet bei allen Personen. " +
+        (filled === 0 ? "Bisher hat niemand etwas darin eingetragen."
+          : filled === 1 ? "Bei 1 Person gehen damit Einträge verloren." : "Bei " + filled + " Personen gehen damit Einträge verloren.") +
+        " Zum bloßen Verstecken reicht das Auge.", "Endgültig löschen").then(function(ok){
+        if (!ok) return;
+        state.categories = state.categories.filter(function(x){ return x.id !== c.id; });
+        state.people.forEach(function(p){ delete p.entries[c.id]; });
+        saveNow(); render(); toast("Kategorie gelöscht");
+      });
+    } })).style.marginTop = "6px";
+    box.appendChild(card);
+  }); }
+
+  /* Sortieren am Handy: Kategorie gedrückt halten, dann nach oben oder unten ziehen */
+  function enableDrag(card, box, list){
+    var timer = null, dragging = false, startY = 0, lastY = 0, scroller = null;
+    function stopTimer(){ clearTimeout(timer); timer = null; }
+    function place(y){
+      var others = Array.prototype.filter.call(box.children, function(el){ return el !== card; });
+      var before = null;
+      for (var i = 0; i < others.length; i++) {
+        var r = others[i].getBoundingClientRect();
+        if (y < r.top + r.height / 2) { before = others[i]; break; }
+      }
+      if (before) { if (card.nextSibling !== before) box.insertBefore(card, before); }
+      else if (box.lastChild !== card) box.appendChild(card);
+    }
+    function finish(apply){
+      stopTimer();
+      clearInterval(scroller); scroller = null;
+      if (!dragging) return;
+      dragging = false;
+      card.classList.remove("dragging");
+      document.body.classList.remove("sorting");
+      if (apply) {
+        // neue Reihenfolge der Gruppe auf ihre bisherigen Plätze in der Gesamtliste legen
+        var ids = Array.prototype.map.call(box.children, function(el){ return el.getAttribute("data-id"); });
+        var slots = list.map(function(c){ return state.categories.indexOf(c); }).sort(function(a, b){ return a - b; });
+        var byId = {};
+        list.forEach(function(c){ byId[c.id] = c; });
+        ids.forEach(function(id, i){ state.categories[slots[i]] = byId[id]; });
+        saveNow();
+      }
+      render();
+    }
+    card.addEventListener("touchstart", function(ev){
+      if (ev.touches.length !== 1 || list.length < 2) return;
+      var t = ev.target;
+      if (t.closest("button, a, label, .catbody") || document.activeElement === t) return;   // Knöpfe und laufende Texteingabe bleiben unberührt
+      startY = lastY = ev.touches[0].clientY;
+      stopTimer();
+      timer = setTimeout(function(){
+        timer = null;
+        dragging = true;
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        card.classList.add("dragging");
+        document.body.classList.add("sorting");
+        try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) {}
+        scroller = setInterval(function(){
+          if (lastY < 90) window.scrollBy(0, -10);
+          else if (lastY > window.innerHeight - 150) window.scrollBy(0, 10);
+          else return;
+          place(lastY);
+        }, 16);
+      }, 380);
+    }, { passive: true });
+    card.addEventListener("touchmove", function(ev){
+      var y = ev.touches[0].clientY;
+      if (!dragging) { if (timer && Math.abs(y - startY) > 8) stopTimer(); return; }   // normales Scrollen
+      if (ev.cancelable) ev.preventDefault();
+      lastY = y;
+      place(y);
+    }, { passive: false });
+    card.addEventListener("touchend", function(ev){
+      if (dragging && ev.cancelable) ev.preventDefault();   // kein Antippen des Namensfelds nach dem Ziehen
+      finish(true);
+    });
+    card.addEventListener("touchcancel", function(){ finish(false); });
+    card.addEventListener("contextmenu", function(ev){ if (timer || dragging) ev.preventDefault(); });
+  }
+
+  var shownList = state.categories.filter(function(c){ return !c.hidden; });
+  var hiddenList = state.categories.filter(function(c){ return c.hidden; });
+  drawGroup(shownList);
+  var addSlot = h("div", { class: "addslot" });
+  catsBox.appendChild(addSlot);
+  if (hiddenList.length) {
+    catsBox.appendChild(h("h3", { class: "cmphead", text: "Ausgeblendet" }));
+    drawGroup(hiddenList);
+  }
+
+  // Verschieben innerhalb der eigenen Gruppe (eingeblendet bzw. ausgeblendet)
+  function move(c, dir){
+    var group = c.hidden ? hiddenList : shownList, other = group[group.indexOf(c) + dir];
+    if (!other) return;
+    var a = state.categories, i = a.indexOf(c), j = a.indexOf(other);
+    a[i] = other; a[j] = c;
+    saveNow(); render();
+  }
+
+  var newCat = h("input", { class: "field", type: "text", placeholder: "Neue Kategorie", "aria-label": "Neue Kategorie", autocomplete: "off",
+    onkeydown: function(ev){ if (ev.key === "Enter") addCat(); } });
+  function addCat(){
+    var v = newCat.value.trim();
+    if (!v) { newCat.focus(); return; }
+    state.categories.push({ id: uid(), name: v, subs: [] }); saveNow(); render();
+    toast("Kategorie hinzugefügt");
+  }
+  addSlot.appendChild(h("div", { class: "row" }, newCat, h("button", { class: "btn primary", text: "Hinzufügen", onclick: addCat })));
+
+  /* Backup */
+  // Vergleichen: welche Kategorien von Anfang an zur Auswahl stehen und wie viele Personen
+  var cmpBox = h("div", { id: "cmpbox", class: "fold" });
+  var cmpAll = visibleCats(), cmpFirst = compareFirstCats(cmpAll);
+  app.appendChild(foldHead("Vergleichen", cmpFirst.length + (cmpFirst.length === 1 ? " Kategorie, " : " Kategorien, ") + prefs.cmpPeople + " Personen", cmpBox,
+    function(){ return cmpOpen; }, function(){ cmpOpen = !cmpOpen; }));
+  app.appendChild(cmpBox);
+  cmpBox.appendChild(h("p", { class: "small", text: "Kategorien, die sofort zur Auswahl stehen" })).style.margin = "0 0 6px";
+  cmpBox.appendChild(h("p", { class: "muted small", text: "Tippe sie in der gewünschten Reihenfolge an; die Zahl zeigt den Platz. Alle anderen erreichst du im Vergleich über das +." }));
+  var cmpChips = h("div", { class: "chips" });
+  cmpFirst.concat(cmpAll.filter(function(c){ return cmpFirst.indexOf(c) === -1; })).forEach(function(c){
+    var at = cmpFirst.indexOf(c);
+    cmpChips.appendChild(h("button", { class: "chip", type: "button", "aria-pressed": at !== -1 ? "true" : "false",
+      text: (at !== -1 ? (at + 1) + ". " : "") + catName(c),
+      onclick: function(){
+        var ids = cmpFirst.map(function(x){ return x.id; });
+        if (at !== -1) ids.splice(at, 1); else ids.push(c.id);
+        setPref("cmpCats", ids); render();
+      } }));
+  });
+  cmpBox.appendChild(cmpChips);
+  if (prefs.cmpCats) cmpBox.appendChild(h("button", { class: "btn", type: "button", text: "Vorgabe wiederherstellen",
+    onclick: function(){ setPref("cmpCats", null); render(); } })).style.marginBottom = "14px";
+  pick(cmpBox, "Personen, die sofort zur Auswahl stehen", prefs.cmpPeople, [[3, "3"], [5, "5"], [8, "8"], [10, "10"]], function(v){ setPref("cmpPeople", v); });
+
+  // Sicherheit: PIN
+  var secBox = h("div", { id: "secbox", class: "fold" });
+  var autoNames = { 0: "sperrt sofort beim Verlassen", 1: "sperrt nach 1 Minute", 5: "sperrt nach 5 Minuten" };
+  app.appendChild(foldHead("Sicherheit", lock ? "PIN an, " + (lock.rec.bio ? "Fingerabdruck an, " : "") + autoNames[lock.auto] : "PIN aus", secBox,
+    function(){ return secOpen; }, function(){ secOpen = !secOpen; }));
+  app.appendChild(secBox);
+  function pinField(id, label){
+    var input = h("input", { class: "field", type: "password", inputmode: "numeric", autocomplete: "off", id: id, maxlength: "12" });
+    secBox.appendChild(h("label", { for: id, text: label }));
+    secBox.appendChild(input);
+    return input;
+  }
+  if (!lock) {
+    secBox.appendChild(h("p", { class: "muted small", text: "Mit einer PIN fragt die App beim Öffnen danach. Das schützt vor neugierigen Blicken, wenn jemand dein entsperrtes Handy in der Hand hat. Die Daten und Backup-Dateien werden dadurch nicht verschlüsselt. Vergisst du die PIN, kommst du nur über ein gespeichertes Backup wieder an deine Daten." }));
+    var pinNew = pinField("pinNew", "Neue PIN (4 bis 12 Ziffern)"), pinRepeat = pinField("pinRepeat", "PIN wiederholen");
+    secBox.appendChild(h("button", { class: "btn primary", type: "button", text: "PIN einschalten", onclick: function(){
+      if (!validPin(pinNew.value)) { toast("Die PIN braucht 4 bis 12 Ziffern"); pinNew.focus(); return; }
+      if (pinNew.value !== pinRepeat.value) { toast("Die beiden Eingaben stimmen nicht überein"); pinRepeat.focus(); return; }
+      setPin(pinNew.value).then(function(){ render(); toast("PIN eingeschaltet"); });
+    } }));
+  } else {
+    secBox.appendChild(h("p", { class: "small", text: "Automatisch sperren" })).style.margin = "0 0 6px";
+    var autoBox = h("div", { class: "chips", role: "group", "aria-label": "Automatisch sperren" }), autoNodes = [];
+    [[0, "Sofort beim Verlassen"], [1, "Nach 1 Minute"], [5, "Nach 5 Minuten"]].forEach(function(o){
+      var chip = h("button", { class: "chip", type: "button", text: o[1], "aria-pressed": lock.auto === o[0] ? "true" : "false", onclick: function(){
+        lock.auto = o[0]; saveLock();
+        autoNodes.forEach(function(x){ x.node.setAttribute("aria-pressed", x.value === o[0] ? "true" : "false"); });
+      } });
+      autoNodes.push({ value: o[0], node: chip });
+      autoBox.appendChild(chip);
+    });
+    secBox.appendChild(autoBox);
+    secBox.appendChild(h("button", { class: "btn", type: "button", text: "Jetzt sperren", onclick: doLock })).style.marginBottom = "18px";
+    // Entsperren mit der Biometrie des Handys, zusätzlich zur PIN
+    var bioBox = h("div", { class: "recopt" }, h("strong", { text: "Mit Fingerabdruck oder Gesicht entsperren" }),
+      h("span", { class: "state", text: lock.rec.bio ? "An. Die App fragt beim Öffnen danach; die PIN gilt weiterhin."
+        : bioSupported() ? "Aus. Nutzt die Entsperrung dieses Handys, die PIN bleibt als zweiter Weg."
+        : "Auf diesem Gerät oder in dieser Umgebung nicht verfügbar." }));
+    if (lock.rec.bio) bioBox.appendChild(h("button", { class: "btn danger", type: "button", text: "Ausschalten", onclick: function(){
+      lock.rec.bio = null; lock.rec.bioReset = false; saveLock(); render(); toast("Entsperren per Fingerabdruck ausgeschaltet");
+    } }));
+    else if (bioSupported()) bioBox.appendChild(h("button", { class: "btn", type: "button", text: "Einrichten", onclick: function(){
+      var asked;
+      try {
+        asked = navigator.credentials.create({ publicKey: {
+          challenge: unbHex(randomHex(32)), rp: { name: "Merkbuch" },
+          user: { id: unbHex(randomHex(16)), name: "merkbuch", displayName: "Merkbuch" },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },
+          timeout: 60000, attestation: "none" } });
+      } catch (e) { asked = Promise.reject(e); }
+      asked.then(function(cred){
+        if (!cred) { toast("Das hat nicht geklappt"); return; }
+        lock.rec.bio = { id: b64(cred.rawId) }; saveLock(); render(); toast("Entsperren per Fingerabdruck eingerichtet");
+      }, function(){ toast("Das hat nicht geklappt oder wurde abgebrochen"); });
+    } }));
+    secBox.appendChild(bioBox);
+    bioBox.style.marginBottom = "8px";
+
+    if (recovered) secBox.appendChild(h("div", { class: "banner", text: "Du hast die Sperre ohne PIN geöffnet. Vergib jetzt eine neue PIN oder schalte sie aus; die alte gilt sonst weiter." }));
+    var pinCur = recovered ? null : pinField("pinCur", "Aktuelle PIN"), pinNext = pinField("pinNext", recovered ? "Neue PIN (4 bis 12 Ziffern)" : "Neue PIN (nur zum Ändern)");
+    function withCurrent(then){
+      if (recovered) { then(); return; }
+      checkPin(pinCur.value).then(function(ok){
+        if (!ok) { toast("Die aktuelle PIN stimmt nicht"); pinCur.focus(); return; }
+        then();
+      });
+    }
+    secBox.appendChild(h("div", { class: "row" },
+      h("button", { class: "btn", type: "button", text: "PIN ändern", onclick: function(){
+        if (!validPin(pinNext.value)) { toast("Die neue PIN braucht 4 bis 12 Ziffern"); pinNext.focus(); return; }
+        withCurrent(function(){ setPin(pinNext.value).then(function(){ recovered = false; render(); toast("PIN geändert"); }); });
+      } }),
+      h("button", { class: "btn danger", type: "button", text: "PIN ausschalten", onclick: function(){
+        withCurrent(function(){ lock = null; recovered = false; saveLock(); render(); toast("PIN ausgeschaltet"); });
+      } })));
+
+    // Erlaubte Wege bei vergessener PIN: alles aus, bis du es einschaltest
+    var rec = lock.rec;
+    secBox.appendChild(h("h3", { class: "cmphead", text: "Wenn du die PIN vergisst" }));
+    secBox.appendChild(h("p", { class: "muted small", text: "Wähle, welche Wege erlaubt sind. Jeder eingeschaltete Weg ist auch für andere ein möglicher Weg an der PIN vorbei. Ein Backup zu laden geht immer; es ersetzt alle Daten." }));
+    function recOpt(title, state){
+      var box = h("div", { class: "recopt" }, h("strong", { text: title }), h("span", { class: "state", text: state }));
+      secBox.appendChild(box);
+      return box;
+    }
+    function recInput(box, id, label, value, type){
+      var input = h("input", { class: "field", type: type || "text", id: id, autocomplete: "off", value: value || "" });
+      box.appendChild(h("label", { for: id, text: label }));
+      box.appendChild(input);
+      return input;
+    }
+    function changed(message){ saveLock(); render(); toast(message); }
+
+    // 1. Wiederherstellungscode
+    var codeOpt = recOpt("Wiederherstellungscode", rec.code ? "An. Der Code wurde dir beim Einrichten gezeigt." : "Aus. Ein langer Code, den du dir notierst.");
+    codeOpt.appendChild(h("div", { class: "row" },
+      h("button", { class: "btn", type: "button", text: rec.code ? "Neuen Code erzeugen" : "Einschalten", onclick: function(){
+        var code = newRecoveryCode(), salt = randomHex(8);
+        pinHash(normCode(code), salt).then(function(hash){
+          rec.code = { salt: salt, hash: hash }; saveLock(); render();
+          var d = h("dialog", null,
+            h("h3", { text: "Dein Wiederherstellungscode" }),
+            h("p", { class: "codebox", text: code }),
+            h("p", { text: "Notiere ihn jetzt an einem sicheren Ort. Er wird nicht noch einmal angezeigt; ein früherer Code gilt nicht mehr." }),
+            h("div", { class: "row" },
+              h("button", { class: "btn", type: "button", text: "Kopieren", onclick: function(){ copyText(code, ""); } }),
+              h("button", { class: "btn primary", type: "button", text: "Notiert", onclick: function(){ d.remove(); } })));
+          d.addEventListener("close", function(){ d.remove(); });
+          document.body.appendChild(d); showDialog(d);
+        });
+      } }),
+      rec.code ? h("button", { class: "btn danger", type: "button", text: "Ausschalten", onclick: function(){ rec.code = null; changed("Wiederherstellungscode ausgeschaltet"); } }) : null));
+
+    // 3. Sicherheitsfrage
+    var qOpt = recOpt("Sicherheitsfrage", rec.question ? "An. Frage: " + rec.question.q : "Aus. Die richtige Antwort erlaubt eine neue PIN.");
+    var qInput = recInput(qOpt, "recQuestion", "Frage", rec.question ? rec.question.q : "");
+    var aInput = recInput(qOpt, "recAnswer", rec.question ? "Neue Antwort" : "Antwort", "");
+    qOpt.appendChild(h("div", { class: "row" },
+      h("button", { class: "btn", type: "button", text: "Speichern", onclick: function(){
+        var q = qInput.value.trim().slice(0, 200), a = normAnswer(aInput.value);
+        if (!q) { toast("Bitte eine Frage eingeben"); qInput.focus(); return; }
+        if (a.length < 3) { toast("Die Antwort braucht mindestens 3 Zeichen"); aInput.focus(); return; }
+        var salt = randomHex(8);
+        pinHash(a, salt).then(function(hash){ rec.question = { q: q, salt: salt, hash: hash }; changed("Sicherheitsfrage gespeichert"); });
+      } }),
+      rec.question ? h("button", { class: "btn danger", type: "button", text: "Ausschalten", onclick: function(){ rec.question = null; changed("Sicherheitsfrage ausgeschaltet"); } }) : null));
+
+    // Fingerabdruck oder Gesicht auch zum Zurücksetzen der PIN
+    var bioOpt = recOpt("Fingerabdruck oder Gesicht", !rec.bio ? "Aus. Richte dafür erst oben das Entsperren per Fingerabdruck ein."
+      : rec.bioReset ? "An. Damit lässt sich auch eine neue PIN vergeben."
+      : "Aus. Der Fingerabdruck entsperrt die App, eine neue PIN lässt sich damit nicht vergeben.");
+    if (rec.bio) bioOpt.appendChild(h("button", { class: "btn" + (rec.bioReset ? " danger" : ""), type: "button", text: rec.bioReset ? "Ausschalten" : "Einschalten", onclick: function(){
+      rec.bioReset = !rec.bioReset; changed(rec.bioReset ? "Zurücksetzen per Fingerabdruck eingeschaltet" : "Zurücksetzen per Fingerabdruck ausgeschaltet");
+    } }));
+
+    // 5. Zurücksetzen mit Wartezeit
+    var delayOpt = recOpt("Zurücksetzen mit Wartezeit", rec.delay
+      ? "An. Ohne PIN lässt sich das Zurücksetzen anfordern; es wird nach " + RESET_HOURS + " Stunden möglich."
+      : "Aus. Wer das Handy länger als " + RESET_HOURS + " Stunden hat, käme damit ohne PIN hinein.");
+    delayOpt.appendChild(h("button", { class: "btn" + (rec.delay ? " danger" : ""), type: "button", text: rec.delay ? "Ausschalten" : "Einschalten", onclick: function(){
+      rec.delay = !rec.delay; rec.delayUntil = 0; changed(rec.delay ? "Zurücksetzen mit Wartezeit eingeschaltet" : "Zurücksetzen mit Wartezeit ausgeschaltet");
+    } }));
+  }
+
+  // Backup
+  if (fallbackJson !== null) backupOpen = true;
+  var backupBox = h("div", { id: "backupbox", class: "fold" });
+  var backupDate = readDate(BACKUP_KEY);
+  app.appendChild(foldHead("Backup", backupDate ? "zuletzt am " + new Date(backupDate).toLocaleDateString("de-DE") : "noch keins gespeichert", backupBox,
+    function(){ return backupOpen; }, function(){ backupOpen = !backupOpen; }));
+  var backupStart = app.children.length;
+  app.appendChild(h("p", { class: "muted small", text: "Deine Daten liegen nur in diesem Browser auf diesem Gerät. Speichere regelmäßig ein Backup, zum Beispiel bevor du Browserdaten löschst oder das Handy wechselst. Ein Backup enthält alles und ersetzt beim Laden die jetzigen Daten. Eine einzelne Person speicherst du in ihrer Ansicht über das Pfeil-Symbol; ihre Datei wird beim Laden hinzugefügt, ohne etwas zu ersetzen." }));
+
+  var file = h("input", { type: "file", accept: ".json,application/json,text/plain", hidden: true,
+    onchange: function(){
+      var f = file.files && file.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function(){ importText(String(reader.result)); };
+      reader.onerror = function(){ toast("Die Datei konnte nicht gelesen werden"); };
+      reader.readAsText(f);
+      file.value = "";
+    } });
+  app.appendChild(file);
+  app.appendChild(h("div", { class: "row" },
+    h("button", { class: "btn primary", text: "Backup speichern", onclick: exportBackup }),
+    h("button", { class: "btn", text: "Datei laden", onclick: function(){ file.click(); } })
+  ));
+  if (canShareFiles()) {
+    app.appendChild(h("button", { class: "btn", text: "Backup teilen, z. B. an Google Drive", onclick: shareBackup })).style.marginTop = "8px";
+  }
+  var lastBackup = readDate(BACKUP_KEY);
+  app.appendChild(h("p", { class: "muted small", text: lastBackup
+    ? "Letztes Backup: " + new Date(lastBackup).toLocaleDateString("de-DE") + "."
+    : "Bisher wurde kein Backup gespeichert." })).style.margin = "10px 0 14px";
+  pick(app, "An ein Backup erinnern", prefs.remind, [[7, "Nach 7 Tagen"], [30, "Nach 30 Tagen"], [90, "Nach 90 Tagen"], [0, "Nie"]], function(v){ setPref("remind", v); });
+
+  if (fallbackJson !== null) {
+    var out = h("textarea", { class: "field", readonly: true, "aria-label": "Backup als Text", value: fallbackJson,
+      onfocus: function(){ out.select(); } });
+    out.style.cssText = "margin-top:12px;height:140px;overflow:auto";
+    app.appendChild(h("p", { class: "small", text: "Die Datei konnte hier nicht gespeichert werden. Kopiere stattdessen diesen Text und bewahre ihn auf:" })).style.marginTop = "12px";
+    app.appendChild(out);
+    out.setAttribute("data-fixed", "1");
+  }
+
+  var details = h("details", null, h("summary", { class: "small", text: "Notlösung: Backup als Text einfügen" }));
+  details.style.marginTop = "14px";
+  details.appendChild(h("p", { class: "muted small", text: "Nur nötig, wenn das Speichern oder Laden einer Datei auf diesem Gerät nicht klappt: Dann zeigt die App das Backup als Text zum Kopieren an, und hier fügst du ihn wieder ein." })).style.margin = "10px 0 0";
+  var paste = h("textarea", { class: "field", placeholder: "Backup-Text hier einfügen", "aria-label": "Backup-Text einfügen" });
+  paste.style.cssText = "margin:10px 0;height:120px;overflow:auto";
+  paste.setAttribute("data-fixed", "1");
+  details.appendChild(paste);
+  details.appendChild(h("button", { class: "btn", text: "Text laden", onclick: function(){ importText(paste.value); } }));
+  app.appendChild(details);
+
+  while (app.children.length > backupStart) backupBox.appendChild(app.children[backupStart]);   // alles seit der Überschrift gehört in den Backup-Abschnitt
+  app.appendChild(backupBox);
+
+  // Zurücksetzen
+  var resetBox = h("div", { id: "resetbox", class: "fold" });
+  app.appendChild(foldHead("Zurücksetzen", "", resetBox, function(){ return resetOpen; }, function(){ resetOpen = !resetOpen; }));
+  app.appendChild(resetBox);
+  resetBox.appendChild(h("p", { class: "muted small", text: "Löscht alle Personen mit Notizen, Fotos und Bildern, setzt die Kategorien und alle Einstellungen auf den Anfangszustand und schaltet die PIN aus. Das lässt sich nur mit einem vorher gespeicherten Backup rückgängig machen." }));
+  resetBox.appendChild(h("button", { class: "btn danger", type: "button", text: "Alles löschen", onclick: resetAll }));
+
+  // Jeden Abschnitt (Überschrift + Inhalt) in eine Karte fassen
+  Array.prototype.slice.call(app.querySelectorAll("h2")).forEach(function(head){
+    var box = head.nextElementSibling;
+    if (!head.querySelector(".h2btn") || !box) return;
+    var card = h("section", { class: "card setcard" });
+    app.insertBefore(card, head);
+    card.appendChild(head);
+    card.appendChild(box);
+  });
+
+  app.appendChild(h("p", { class: "muted small", text: "Version " + APP_VERSION })).style.margin = "18px 0 0";
+}
+
+function exportBackup(){
+  flushPending();
+  if (saveTimer) saveNow();
+  collectImages(imageIds(state.people)).then(function(images){
+    writeBackup(JSON.stringify({ version: state.version, categories: state.categories, people: state.people, images: images }, null, 2));
+  });
+}
+/* Backup über das Teilen-Menü des Handys weitergeben, z. B. an Google Drive */
+function canShareFiles(){ return !!(navigator.share && navigator.canShare && window.File); }
+function shareBackup(){
+  flushPending();
+  if (saveTimer) saveNow();
+  collectImages(imageIds(state.people)).then(function(images){
+    var json = JSON.stringify({ version: state.version, categories: state.categories, people: state.people, images: images }, null, 2);
+    var name = "merkbuch-backup-" + stamp();
+    var files = [new File([json], name + ".json", { type: "application/json" }), new File([json], name + ".txt", { type: "text/plain" })];
+    var file = files.filter(function(f){ try { return navigator.canShare({ files: [f] }); } catch (e) { return false; } })[0];
+    if (!file) { toast("Teilen von Dateien geht auf diesem Gerät nicht. Nutze „Backup speichern“."); return; }
+    navigator.share({ files: [file], title: "Merkbuch-Backup" }).then(function(){
+      markBackup(); toast("Backup weitergegeben"); if (view === "settings") render();
+    }, function(err){
+      if (err && err.name === "AbortError") return;
+      toast("Teilen hat nicht geklappt. Nutze „Backup speichern“.");
+    });
+  });
+}
+
+function writeBackup(json){
+  var d = new Date();
+  var stamp = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  var filename = "merkbuch-backup-" + stamp + ".json";
+  function fallback(){ fallbackJson = json; if (view === "settings") { render(); window.scrollTo(0, document.body.scrollHeight); } }
+
+  var useP = (window.claude && typeof window.claude.use === "function") ? window.claude.use("downloads") : Promise.resolve(null);
+  useP.then(function(downloads){
+    if (!downloads) {
+      if (STANDALONE && browserDownload(filename, json)) { fallbackJson = null; markBackup(); toast("Backup gespeichert, es liegt bei deinen Downloads"); if (view === "settings") render(); }
+      else fallback();
+      return;
+    }
+    return downloads.save({ filename: filename, data: json }).then(function(){
+      fallbackJson = null; markBackup(); toast("Backup gespeichert"); if (view === "settings") render();
+    }, function(err){
+      var code = err && err.code;
+      if (code === "declined") return;
+      if (code === "rate_limited") { toast("Bitte kurz warten und noch einmal versuchen"); return; }
+      fallback();
+    });
+  }).catch(fallback);
+}
+
+function stamp(){
+  var d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+/* Datei anbieten; wenn das hier nicht geht, den Inhalt zum Kopieren zeigen */
+function saveFile(filename, json, doneMessage){
+  function fallback(){
+    var ta = h("textarea", { class: "field", readonly: true, rows: "8", "aria-label": "Inhalt der Datei", value: json });
+    var d = h("dialog", null,
+      h("p", { text: "Die Datei konnte hier nicht gespeichert werden. Kopiere stattdessen diesen Text; er lässt sich unter Einstellungen → „Backup als Text einfügen“ wieder laden." }), ta,
+      h("div", { class: "row" },
+        h("button", { class: "btn", text: "Kopieren", onclick: function(){ d.remove(); copyText(json, ""); } }),
+        h("button", { class: "btn primary", text: "Schließen", onclick: function(){ d.remove(); } })));
+    d.addEventListener("close", function(){ d.remove(); });
+    document.body.appendChild(d); showDialog(d);
+  }
+  var useP = (window.claude && typeof window.claude.use === "function") ? window.claude.use("downloads") : Promise.resolve(null);
+  useP.then(function(downloads){
+    if (!downloads) {
+      if (STANDALONE && browserDownload(filename, json)) toast(doneMessage + ", sie liegt bei deinen Downloads"); else fallback();
+      return;
+    }
+    return downloads.save({ filename: filename, data: json }).then(function(){ toast(doneMessage); }, function(err){
+      var code = err && err.code;
+      if (code === "declined") return;
+      if (code === "rate_limited") { toast("Bitte kurz warten und noch einmal versuchen"); return; }
+      fallback();
+    });
+  }).catch(fallback);
+}
+
+/* Eine Person samt der Kategorien, in denen etwas eingetragen ist */
+function exportPerson(p){
+  var cats = state.categories.filter(function(c){ return isFilled(p, c); });
+  var entries = {};
+  cats.forEach(function(c){ entries[c.id] = p.entries[c.id]; });
+  function makeJson(images){
+    return JSON.stringify({ type: "merkbuch-person", version: state.version, exported: stamp(),
+      categories: cats, person: { id: p.id, name: p.name, photo: p.photo || "", card: cardOf(p), entries: entries }, images: images }, null, 2);
+  }
+  var slug = displayName(p).toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "person";
+  collectImages(imageIds([{ entries: entries }])).then(function(images){
+    saveFile("merkbuch-" + slug + "-" + stamp() + ".json", makeJson(images), "Datei gespeichert");
+  });
+}
+
+/* Fügt eine Person aus einer Datei hinzu. Kategorien und Unterkategorien werden über ihre Namen zugeordnet,
+   fehlende angelegt. Bestehende Daten bleiben unverändert. */
+function importPerson(raw){
+  var src = null;
+  try { src = normalize({ version: raw.version, categories: raw.categories, people: [raw.person] }); } catch (e) { src = null; }
+  if (!src || !src.people.length) { toast("Das ist keine gültige Merkbuch-Datei"); return; }
+  var sp = src.people[0];
+  function key(x){ return String(x.name).trim().toLowerCase(); }
+  function fresh(notes){
+    return notes.map(function(n){
+      var c = { id: uid(), title: n.title, desc: n.desc, url: n.url, imgs: (n.imgs || []).slice() };
+      if (n.given) { c.given = true; c.givenNote = n.givenNote || ""; c.givenAt = n.givenAt || ""; }
+      return c;
+    });
+  }
+  var entries = {}, newCats = 0;
+  src.categories.forEach(function(sc){
+    var se = sp.entries[sc.id];
+    if (!se) return;
+    var tc = state.categories.filter(function(c){ return key(c) === key(sc); })[0];
+    if (!tc) { tc = { id: uid(), name: sc.name, kind: sc.kind, ranked: sc.ranked, detail: sc.detail, hidden: false, subs: [] }; state.categories.push(tc); newCats++; }
+    var map = {};
+    sc.subs.forEach(function(ss){
+      var used = se.subs.indexOf(ss.id) !== -1 || ((se.subNotes[ss.id] || []).length > 0);
+      var ts = tc.subs.filter(function(x){ return key(x) === key(ss); })[0];
+      if (!ts) { if (!used) return; ts = { id: uid(), name: ss.name }; tc.subs.push(ts); }
+      map[ss.id] = ts.id;
+    });
+    var ne = { notes: fresh(se.notes), subs: [], subNotes: {} };
+    se.subs.forEach(function(id){ if (map[id] && ne.subs.indexOf(map[id]) === -1) ne.subs.push(map[id]); });
+    Object.keys(se.subNotes).forEach(function(id){ if (map[id] && se.subNotes[id].length) ne.subNotes[map[id]] = fresh(se.subNotes[id]); });
+    entries[tc.id] = ne;
+  });
+  var name = sp.name.trim() || "Ohne Namen";
+  var taken = state.people.some(function(x){ return key(x) === name.toLowerCase(); });
+  var person = { id: uid(), name: taken ? name + " (importiert)" : name, photo: sp.photo || "", card: sp.card, updated: Date.now(), entries: entries };
+  state.people.push(person);
+  saveNow();
+  go("person", person.id);
+  toast("„" + person.name + "“ hinzugefügt" + (newCats ? ", " + newCats + (newCats === 1 ? " neue Kategorie" : " neue Kategorien") : ""));
+}
+
+function pickImportFile(){
+  var f = h("input", { type: "file", accept: ".json,application/json,text/plain" });
+  f.style.display = "none";
+  f.addEventListener("change", function(){
+    var file = f.files && f.files[0];
+    f.remove();
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){ importText(String(reader.result)); };
+    reader.onerror = function(){ toast("Die Datei konnte nicht gelesen werden"); };
+    reader.readAsText(file);
+  });
+  document.body.appendChild(f);
+  f.click();
+}
+
+function importText(text){
+  var raw = null;
+  try { raw = JSON.parse(text); } catch (e) { raw = null; }
+  if (locked && raw && raw.type === "merkbuch-person") { toast("Dafür braucht es ein vollständiges Backup, keine Personen-Datei"); return; }
+  if (raw && raw.type === "merkbuch-person") {
+    gcHold++;
+    storeImages(raw.images).then(function(){ importPerson(raw); gcHold--; scheduleGc(); });
+    return;
+  }
+  var data = null;
+  try { data = normalize(raw); } catch (e) { data = null; }
+  if (!data) { toast("Das ist keine gültige Merkbuch-Datei"); return; }
+  var msg = "Backup mit " + data.people.length + " Personen und " + data.categories.length +
+    " Kategorien laden? Alle jetzigen Daten auf diesem Gerät werden ersetzt.";
+  ask(msg, "Backup laden").then(function(ok){
+    if (!ok) return;
+    gcHold++;
+    storeImages(raw.images).then(function(){
+      state = data; comparePeople = {}; comparePeopleSet = false; compareOn = {}; fallbackJson = null;
+      if (locked) { lock = null; saveLock(); locked = false; }   // Wiederherstellung nach vergessener PIN
+      saveNow(); gcHold--; go("people"); toast("Backup geladen");
+    });
+  });
+}
+
+render();
+})();
+</script>
+<script>
+// Macht die App installierbar und offline nutzbar
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
+</script>
+</body>
+</html>
