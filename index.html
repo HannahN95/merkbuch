@@ -181,6 +181,14 @@ body.sorting{-webkit-user-select:none;user-select:none}
 .subrow .btn.icon{width:44px}
 .indent{margin-left:14px;padding-left:12px;border-left:3px solid var(--chip)}
 
+/* kompakte Rangliste (ohne Notizen je Unterkategorie): eine Zeile je Eintrag */
+.ranklite{list-style:none;margin:0 0 10px;padding:0;border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+.ranklite li{display:flex;align-items:center;gap:8px;min-height:44px;padding:2px 4px 2px 10px;border-top:1.5px solid var(--line)}
+.ranklite li:first-child{border-top:0}
+.ranklite .ranknum{width:24px;height:24px;font-size:.8rem}
+.ranklite .rankname{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.ranklite .btn{flex:none;width:36px;min-height:36px;padding:0;border:0;background:transparent;display:grid;place-items:center}
+.ranklite .btn:disabled{opacity:.25}
 .rank{border:1.5px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
 .rankhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .ranknum{flex:none;width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700}
@@ -208,6 +216,20 @@ body.sorting{-webkit-user-select:none;user-select:none}
 .pointgiven{display:block;margin-top:2px;font-size:.85rem;font-weight:600;color:var(--accent)}
 .archive{margin-top:6px}
 .archive .points{margin-top:6px}
+.point.neg .pointbody{background:transparent;border:1.5px solid rgba(192,38,59,.35)}
+.neghead{margin:10px 0 6px;font-size:.85rem;font-weight:700;color:#C0263B}
+:root[data-theme="dark"] .neghead{color:#FF8A98}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .neghead{color:#FF8A98}}
+.readpoints li.neg b::before,.readneg li b::before{content:"mag nicht: ";font-weight:600;color:#C0263B}
+.grouphead{margin:24px 4px 10px;font-family:var(--display);font-weight:700;font-size:1.05rem;color:var(--muted)}
+.revlist{list-style:none;margin:0 0 14px;padding:0;max-height:52vh;overflow:auto;border:1.5px solid var(--line);border-radius:12px}
+.revlist li{padding:10px 12px;border-top:1.5px solid var(--line)}
+.revlist li:first-child{border-top:0}
+.revlist .who{margin:6px 0 0;font-weight:700;font-size:.9rem;color:var(--muted)}
+.revlist li.whorow{background:var(--chip);padding:6px 12px}
+.revlist .revtitle{display:block;font-weight:600;overflow-wrap:anywhere}
+.revlist .revneg{display:inline-block;margin-left:6px;font-size:.8rem;font-weight:700;color:#C0263B}
+.revlist select.field{margin-top:6px;min-height:40px;padding:6px 10px}
 .pointmeta{display:block;margin-top:2px;font-size:.85rem;color:var(--muted)}
 .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:4px 0 12px}
 .thumbs:empty{display:none}
@@ -280,7 +302,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "12.10.2026 (2)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "12.10.2026 (6)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -377,18 +399,20 @@ try {
   if (darkQuery.addEventListener) darkQuery.addEventListener("change", applyDesign);
   new MutationObserver(applyDesign).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 } catch (e) {}
+var ESSEN_SUBS = ["Vegetarisch", "Vegan", "Kein Schweinefleisch", "Halal", "Laktosefrei", "Glutenfrei"];
+var TEE_SUBS = ["Kaffee", "Kräutertee", "Früchtetee", "Schwarzer Tee"];
 var DEFAULT_CATS = [
   ["Geschenkideen", []],
-  ["Ernährung", ["Vegetarisch", "Vegan"]],
-  ["Mag", []],
-  ["Mag nicht", []],
-  ["Lieblingsessen", []],
+  ["Vorlieben", []],
   ["Allergien", []],
+  // Essen & Trinken
+  ["Essen", ESSEN_SUBS],
   ["Süßigkeiten", ["Schokolade", "Chips", "Kekse", "Fruchtgummi"], true],
   ["Kuchen", ["Kuchen", "Torte"]],
-  ["Pizza", ["Vegetarisch", "Mit Fleisch", "Scharf"]],
+  ["Pizza", ["Scharf"]],
   ["Getränke", ["Mit Alkohol", "Alkoholfrei"]],
-  ["Tee & Kaffee", ["Kaffee", "Früchtetee", "Schwarzer Tee", "Kräutertee"]],
+  ["Tee & Kaffee", TEE_SUBS],
+  // Weiteres
   ["Blumen", ["Schnittblumen", "Topfpflanzen"]],
   ["Lieblingsfarbe", []],
   ["Junggesellinnenabschied", []],
@@ -397,16 +421,50 @@ var DEFAULT_CATS = [
   ["Wein & Bier", ["Rotwein", "Weißwein", "Rosé", "Sekt", "Bier", "Alkoholfrei"]],
   ["Eis", ["Becher", "Waffel"]],
   ["Restaurants", []],
-  ["Hobbys", []],
   ["Größen", []],
   ["Düfte", []],
   ["Bücher, Filme, Musik", ["Bücher", "Filme & Serien", "Musik"]],
   ["Reiseziele", []]
 ];
-var HIDDEN_KINDS = { soft: 1, wein: 1, eis: 1, restaurant: 1, hobby: 1, groesse: 1, duft: 1, medien: 1, reise: 1 };
+var HIDDEN_KINDS = { soft: 1, wein: 1, eis: 1, restaurant: 1, groesse: 1, duft: 1, medien: 1, reise: 1 };
+/* Kategorien mit Bereich „Mag nicht“ und Kategorien unter der Überschrift „Essen & Trinken“ */
+var DISLIKE_KINDS = { vorlieben: 1, essen: 1, suess: 1, kuchen: 1, pizza: 1, cocktails: 1, tee: 1, blumen: 1, duft: 1 };
+var FOOD_KINDS = { essen: 1, suess: 1, kuchen: 1, pizza: 1, cocktails: 1, tee: 1, eis: 1, soft: 1, wein: 1, restaurant: 1 };
+var GROUP_NAMES = { essen: "Essen & Trinken" };
+/* Schätzt für einen Eintrag aus „Mag“/„Mag nicht“, wohin er gehört (Art der Kategorie) */
+var GUESS_EXACT = { kaffee: "tee", tee: "tee", wein: "cocktails", bier: "cocktails", alkohol: "cocktails", cocktails: "cocktails",
+  schokolade: "suess", suessigkeiten: "suess", suesses: "suess", kuchen: "kuchen", torte: "kuchen", pizza: "pizza", eis: "essen", essen: "essen" };
+var GUESS_FOOD = ["fisch", "fleisch", "pilze", "rosinen", "koriander", "oliven", "lakritz", "marzipan", "rosenkohl", "knoblauch", "zwiebeln",
+  "tomaten", "kaese", "gemuese", "obst", "nuesse", "scharf", "scharfes essen", "sushi", "burger", "pasta", "nudeln", "reis", "kartoffeln",
+  "brokkoli", "spinat", "paprika", "erdbeeren", "bananen", "aepfel", "avocado", "ingwer", "zimt", "vanille", "kokos", "leber", "innereien",
+  "meeresfruechte", "garnelen", "lachs", "thunfisch", "haehnchen", "rindfleisch", "schweinefleisch", "lamm", "wild", "ente", "spargel",
+  "brot", "fast food", "suppe", "salat", "curry", "doener", "pommes", "italienisch", "asiatisch", "griechisch", "mexikanisch", "indisch"];
+var GUESS_LISTS = [["suess", ["suess", "sub:schokolade", "sub:chips", "sub:kekse", "sub:fruchtgummi"]], ["kuchen", ["kuchen"]], ["pizza", ["pizza"]],
+  ["essen", ["essen", "eis", "restaurant"]], ["cocktails", ["cocktails"]], ["tee", ["tee"]]];
+function foodGuess(title){
+  var t = normLabel(title), padded = " " + t + " ", hit = "";
+  if (!t) return "vorlieben";
+  if (GUESS_EXACT[t]) return GUESS_EXACT[t];
+  [true, false].some(function(exact){
+    return GUESS_LISTS.some(function(entry){
+      var found = entry[1].some(function(key){
+        return (wordsFor(key) || []).some(function(w){
+          var nw = normLabel(w);
+          return exact ? nw === t : nw.length >= 4 && padded.indexOf(" " + nw + " ") !== -1;
+        });
+      });
+      if (found) hit = entry[0];
+      return found;
+    });
+  });
+  if (hit) return hit;
+  return GUESS_FOOD.some(function(w){ return t === w || padded.indexOf(" " + w + " ") !== -1; }) ? "essen" : "vorlieben";
+}
+
 function makeCat(d){
   var kind = KIND_BY_NAME[d[0].toLowerCase()] || "";
-  return { id: uid(), name: d[0], kind: kind, ranked: !!d[2], detail: !!d[2] || kind === "tee", hidden: !!HIDDEN_KINDS[kind],
+  return { id: uid(), name: d[0], kind: kind, ranked: !!d[2], detail: false, hidden: !!HIDDEN_KINDS[kind],
+    dislikes: !!DISLIKE_KINDS[kind], group: FOOD_KINDS[kind] ? "essen" : "",
     subs: d[1].map(function(n){ return { id: uid(), name: n }; }) };
 }
 
@@ -445,9 +503,11 @@ var KIND_BY_NAME = { "ernährung": "ernaehrung", "partnerin": "partner", "gesche
   "kuchen": "kuchen", "blumen": "blumen", "süßigkeiten": "suess", "lieblingsfarbe": "farbe", "pizza": "pizza", "cocktails": "cocktails",
   "tee": "tee", "junggesellinnenabschied": "jga", "allergien": "allergien" };
 WORD_SRC.hobby = WORD_SRC.mag;
+WORD_SRC.vorlieben = WORD_SRC.mag;
+WORD_SRC.essen = WORD_SRC.essen + "|" + WORD_SRC.ernaehrung;
 WORD_SRC.tee = WORD_SRC.tee + "|" + WORD_SRC.kaffee;
 WORD_SRC.cocktails = WORD_SRC.cocktails + "|" + WORD_SRC.soft + "|" + WORD_SRC.wein;
-["kaffee:kaffee", "kaffee & tee:tee", "tee & kaffee:tee", "getränke:cocktails", "softdrinks:soft", "wein & bier:wein", "lieblingsessen:essen", "eis:eis", "restaurants:restaurant", "hobbys:hobby",
+["kaffee:kaffee", "kaffee & tee:tee", "tee & kaffee:tee", "getränke:cocktails", "vorlieben:vorlieben", "essen:essen", "softdrinks:soft", "wein & bier:wein", "lieblingsessen:essen", "eis:eis", "restaurants:restaurant", "hobbys:hobby",
   "größen:groesse", "düfte:duft", "bücher, filme, musik:medien", "reiseziele:reise"].forEach(function(x){
   var i = x.lastIndexOf(":"); KIND_BY_NAME[x.slice(0, i)] = x.slice(i + 1);
 });
@@ -464,7 +524,7 @@ function uid(){ idCounter++; return Date.now().toString(36) + idCounter.toString
 
 function freshState(){
   return {
-    version: 11,
+    version: 14,
     categories: DEFAULT_CATS.filter(function(d){ return d[0] !== "PartnerIn"; }).map(makeCat),
     people: []
   };
@@ -478,6 +538,8 @@ function toPoints(v){
     var imgs = src && Array.isArray(src.imgs) ? src.imgs.map(String).slice(0, MAX_IMGS) : [];
     if (!pt.title) return;
     var point = { id: id || uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: imgs };
+    if (src && src.neg) point.neg = true;                                     // „mag nicht“
+    if (src && src.review) { point.review = true; point.suggest = String(src.suggest || ""); }   // noch einzusortieren
     if (src && src.given) {   // liegt im Geschenkarchiv
       point.given = true;
       point.givenNote = String(src.givenNote || "").trim().slice(0, 300);
@@ -586,7 +648,8 @@ function normalize(data){
     (Array.isArray(c.subs) ? c.subs : []).forEach(function(s){
       if (s && typeof s === "object") subs.push({ id: String(s.id || uid()), name: String(s.name || "") });
     });
-    cats.push({ id: String(c.id || uid()), name: String(c.name || ""), kind: String(c.kind || ""), ranked: !!c.ranked, detail: !!(c.detail || c.ranked), hidden: !!c.hidden, subs: subs });
+    cats.push({ id: String(c.id || uid()), name: String(c.name || ""), kind: String(c.kind || ""), ranked: !!c.ranked, detail: c.detail !== undefined ? !!c.detail : !!c.ranked, hidden: !!c.hidden,
+      dislikes: !!c.dislikes, group: c.group === "essen" ? "essen" : "", subs: subs });
   });
   var people = [];
   data.people.forEach(function(p){
@@ -747,6 +810,154 @@ function migrate(s){
     s.categories = s.categories.map(function(c, i){ return { c: c, k: rank[c.kind] !== undefined ? rank[c.kind] : 1000 + i }; })
       .sort(function(a, b){ return a.k - b.k; }).map(function(x){ return x.c; });
     s.version = 11;
+  }
+  if (s.version < 12) {
+    // „Mag“ und „Mag nicht“ werden zu „Vorlieben“ (mit Bereich „Mag nicht“); Essen bekommt eine eigene Kategorie.
+    // Die Einträge landen zunächst in „Vorlieben“ und sind zum Einsortieren markiert (Prüfliste beim Start).
+    var byKind = function(k){ return s.categories.filter(function(c){ return c.kind === k; })[0]; };
+    var mag = byKind("mag"), magNot = byKind("magnicht"), hobby = byKind("hobby");
+    var vor = byKind("vorlieben");
+    if (!vor) { vor = makeCat(["Vorlieben", []]); s.categories.push(vor); }
+    s.categories.splice(s.categories.indexOf(vor), 1);
+    var gift = byKind("geschenk");
+    s.categories.splice(gift ? s.categories.indexOf(gift) + 1 : (mag ? s.categories.indexOf(mag) : 0), 0, vor);
+    var food = byKind("essen");
+    if (food) { if (food.name.trim() === "Lieblingsessen") food.name = "Essen"; }
+    else {
+      food = makeCat(["Essen", []]);
+      var allergies = byKind("allergien");
+      s.categories.splice(allergies ? s.categories.indexOf(allergies) + 1 : s.categories.length, 0, food);
+    }
+    vor.hidden = false; food.hidden = false;
+    s.categories.forEach(function(c){
+      if (DISLIKE_KINDS[c.kind]) c.dislikes = true;
+      if (FOOD_KINDS[c.kind]) c.group = "essen";
+    });
+    [[mag, false, true], [magNot, true, true], [hobby, false, false]].forEach(function(x){
+      var src = x[0], neg = x[1], review = x[2];
+      if (!src) return;
+      s.people.forEach(function(p){
+        var e = p.entries[src.id];
+        if (!e) return;
+        var moved = (e.notes || []).slice();
+        (e.subs || []).forEach(function(id){
+          var sub = src.subs.filter(function(y){ return y.id === id; })[0];
+          if (sub) moved.push({ id: uid(), title: sub.name, desc: "", url: "", imgs: [] });
+        });
+        Object.keys(e.subNotes || {}).forEach(function(k){ (e.subNotes[k] || []).forEach(function(n){ moved.push(n); }); });
+        if (moved.length) {
+          var target = p.entries[vor.id] || (p.entries[vor.id] = { notes: [], subs: [], subNotes: {} });
+          moved.forEach(function(n){
+            if (neg) n.neg = true; else delete n.neg;
+            if (review && !n.given) { n.review = true; n.suggest = foodGuess(n.title); }
+            target.notes.push(n);
+          });
+        }
+        delete p.entries[src.id];
+      });
+      s.categories = s.categories.filter(function(c){ return c !== src; });
+    });
+    s.version = 12;
+  }
+  if (s.version < 13) {
+    // Ernährung geht in „Essen“ auf (als Auswahl zum Ankreuzen), Allergien steht vor „Essen & Trinken“,
+    // „Tee & Kaffee“ wird eine einfache Auswahl mit Notizfeld.
+    var kindOf = function(k){ return s.categories.filter(function(c){ return c.kind === k; })[0]; };
+    var sortSubs = function(cat, wanted){
+      wanted.forEach(function(name){
+        if (!cat.subs.some(function(x){ return normLabel(x.name) === normLabel(name); })) cat.subs.push({ id: uid(), name: name });
+      });
+      var rank = function(x){ var i = wanted.map(normLabel).indexOf(normLabel(x.name)); return i === -1 ? 100 : i; };
+      cat.subs = cat.subs.map(function(x, i){ return { x: x, k: rank(x) * 1000 + i }; }).sort(function(a, b){ return a.k - b.k; }).map(function(y){ return y.x; });
+    };
+    var eat = kindOf("essen"), diet = kindOf("ernaehrung"), allergy = kindOf("allergien"), tea = kindOf("tee"), likes = kindOf("vorlieben");
+    if (eat) {
+      sortSubs(eat, ESSEN_SUBS);
+      if (diet) {
+        s.people.forEach(function(p){
+          var e = p.entries[diet.id];
+          if (!e) return;
+          var t = p.entries[eat.id] || (p.entries[eat.id] = { notes: [], subs: [], subNotes: {} });
+          (e.subs || []).forEach(function(id){
+            var from = diet.subs.filter(function(x){ return x.id === id; })[0];
+            if (!from) return;
+            var to = eat.subs.filter(function(x){ return normLabel(x.name) === normLabel(from.name); })[0];
+            if (!to) { to = { id: uid(), name: from.name }; eat.subs.push(to); }
+            if (t.subs.indexOf(to.id) === -1) t.subs.push(to.id);
+          });
+          var moved = (e.notes || []).slice();
+          Object.keys(e.subNotes || {}).forEach(function(k){ (e.subNotes[k] || []).forEach(function(n){ moved.push(n); }); });
+          moved.forEach(function(n){ t.notes.push(n); });
+          delete p.entries[diet.id];
+        });
+        s.categories = s.categories.filter(function(c){ return c !== diet; });
+        eat.hidden = false;
+      }
+    }
+    if (allergy) {
+      allergy.group = "";
+      s.categories.splice(s.categories.indexOf(allergy), 1);
+      var before = likes || kindOf("geschenk");
+      s.categories.splice(before ? s.categories.indexOf(before) + 1 : 0, 0, allergy);
+    }
+    if (tea) {
+      // eigene Notizen zu Kaffee & Co. werden normale Einträge, z. B. „Kaffee – Flat White“
+      s.people.forEach(function(p){
+        var e = p.entries[tea.id];
+        if (!e || !e.subNotes) return;
+        Object.keys(e.subNotes).forEach(function(k){
+          var sub = tea.subs.filter(function(x){ return x.id === k; })[0];
+          (e.subNotes[k] || []).forEach(function(n){
+            if (sub) n.title = sub.name + " – " + n.title;
+            (e.notes || (e.notes = [])).push(n);
+          });
+        });
+        e.subNotes = {};
+      });
+      tea.detail = false; tea.ranked = false;
+      sortSubs(tea, TEE_SUBS);
+    }
+    s.version = 13;
+  }
+  if (s.version < 14) {
+    var kindOf2 = function(k){ return s.categories.filter(function(c){ return c.kind === k; })[0]; };
+    // Optionen entfernen; wer sie angekreuzt hatte, behält die Angabe als Eintrag
+    var dropSubs = function(cat, names){
+      if (!cat) return;
+      var gone = cat.subs.filter(function(x){ return names.map(normLabel).indexOf(normLabel(x.name)) !== -1; });
+      if (!gone.length) return;
+      s.people.forEach(function(p){
+        var e = p.entries[cat.id];
+        if (!e) return;
+        gone.forEach(function(g){
+          var at = (e.subs || []).indexOf(g.id);
+          if (at !== -1) { e.subs.splice(at, 1); (e.notes || (e.notes = [])).push({ id: uid(), title: g.name, desc: "", url: "", imgs: [] }); }
+          ((e.subNotes || {})[g.id] || []).forEach(function(n){ n.title = g.name + " – " + n.title; (e.notes || (e.notes = [])).push(n); });
+          if (e.subNotes) delete e.subNotes[g.id];
+        });
+      });
+      cat.subs = cat.subs.filter(function(x){ return gone.indexOf(x) === -1; });
+    };
+    dropSubs(kindOf2("pizza"), ["Vegetarisch", "Mit Fleisch"]);
+    dropSubs(kindOf2("essen"), ["Pescetarisch", "Kein Alkohol"]);
+    // Süßigkeiten: Rangfolge bleibt, aber nur noch ein Eingabefeld für die ganze Kategorie
+    var sweets = kindOf2("suess");
+    if (sweets) {
+      s.people.forEach(function(p){
+        var e = p.entries[sweets.id];
+        if (!e || !e.subNotes) return;
+        Object.keys(e.subNotes).forEach(function(k){
+          var sub = sweets.subs.filter(function(x){ return x.id === k; })[0];
+          (e.subNotes[k] || []).forEach(function(n){
+            if (sub) n.title = sub.name + " – " + n.title;
+            (e.notes || (e.notes = [])).push(n);
+          });
+        });
+        e.subNotes = {};
+      });
+      sweets.ranked = true; sweets.detail = false;
+    }
+    s.version = 14;
   }
   return s;
 }
@@ -918,7 +1129,7 @@ function entryOf(person, cat){
     if (cat.ranked) {
       e.subs.forEach(function(id){
         var s = subById(cat, id);
-        if (s) items.push({ name: subName(s), notes: (e.subNotes || {})[id] || [] });
+        if (s) items.push({ name: subName(s), notes: cat.detail ? ((e.subNotes || {})[id] || []) : [] });
       });
     } else {
       cat.subs.forEach(function(s){
@@ -926,21 +1137,24 @@ function entryOf(person, cat){
       });
     }
   }
-  return { ranked: !!cat.ranked, detail: hasDetail(cat), items: items, subs: items.map(function(i){ return i.name; }),
-    notes: e ? (e.notes || []).filter(function(n){ return !n.given; }) : [],
+  return { ranked: !!cat.ranked, detail: hasDetail(cat), listed: !!cat.ranked || hasDetail(cat), items: items, subs: items.map(function(i){ return i.name; }),
+    notes: e ? (e.notes || []).filter(function(n){ return !n.given && !n.neg; }) : [],
+    dislikes: e ? (e.notes || []).filter(function(n){ return !n.given && !!n.neg; }) : [],
     archive: e ? (e.notes || []).filter(function(n){ return !!n.given; }) : [] };
 }
-function hasDetail(cat){ return !!(cat.ranked || cat.detail); }
+function hasDetail(cat){ return !!cat.detail; }   // eigene Notizen je Unterkategorie (Rangfolge ist davon unabhängig)
 function noteLabel(n){ return n.title + (n.desc ? ": " + n.desc : ""); }
 function noteTexts(notes){ return notes.map(noteLabel); }
 function entryLine(e){
   var parts = e.items.map(function(it, i){
     return (e.ranked ? (i + 1) + ". " : "") + it.name + (it.notes.length ? " (" + noteTexts(it.notes).join("; ") + ")" : "");
   });
-  return parts.concat(noteTexts(e.notes)).join(", ");
+  parts = parts.concat(noteTexts(e.notes));
+  if (e.dislikes.length) parts.push("mag nicht: " + noteTexts(e.dislikes).join("; "));
+  return parts.join(", ");
 }
 function visibleCats(){ return state.categories.filter(function(c){ return !c.hidden; }); }
-function isFilled(person, cat){ var e = entryOf(person, cat); return e.subs.length > 0 || e.notes.length > 0 || e.archive.length > 0; }
+function isFilled(person, cat){ var e = entryOf(person, cat); return e.subs.length > 0 || e.notes.length > 0 || e.dislikes.length > 0 || e.archive.length > 0; }
 function givenLabel(n){
   var when = n.givenAt ? n.givenAt.slice(8, 10) + "." + n.givenAt.slice(5, 7) + "." + n.givenAt.slice(0, 4) : "";
   return "Geschenkt" + (when ? " am " + when : "") + (n.givenNote ? ", " + n.givenNote : "");
@@ -957,18 +1171,22 @@ function editableEntry(person, catId){
 function noteLine(n){ return noteLabel(n) + (n.url ? " (" + n.url + ")" : ""); }
 function categoryText(person, cat){
   var e = entryOf(person, cat);
-  if (!e.subs.length && !e.notes.length) return "";
+  if (!e.subs.length && !e.notes.length && !e.dislikes.length) return "";
   var lines = [];
-  if (e.detail) {
+  if (e.listed) {
     lines.push(catName(cat) + ":");
     e.items.forEach(function(it, i){
       lines.push((e.ranked ? (i + 1) + ". " : "• ") + it.name);
-      it.notes.forEach(function(n){ lines.push("   - " + noteLine(n)); });
+      it.notes.forEach(function(n){ lines.push("   - " + (n.neg ? "mag nicht: " : "") + noteLine(n)); });
     });
   } else {
     lines.push(catName(cat) + ":" + (e.subs.length ? " " + e.subs.join(", ") : ""));
   }
   e.notes.forEach(function(n){ lines.push("- " + noteLine(n)); });
+  if (e.dislikes.length) {
+    lines.push("Mag nicht:");
+    e.dislikes.forEach(function(n){ lines.push("- " + noteLine(n)); });
+  }
   return lines.join("\n");
 }
 function personText(person){
@@ -1029,14 +1247,17 @@ var archiveOpen = {};   // aufgeklappte Geschenkarchive, je Person und Kategorie
 function today(){ return stamp(); }
 
 /* gift: Schlüssel (Person + Kategorie), wenn Wünsche als geschenkt markiert und ins Archiv gelegt werden können; sonst leer */
-function notesBlock(read, write, placeholder, label, suggest, gift){
+/* „-“, „nicht“ oder „mag nicht:“ am Anfang machen einen Eintrag zu „mag nicht“ */
+var NEG_MARK = /^\s*(?:mag nicht\s*:?|nicht\b|[-–—])\s*/i;
+function notesBlock(read, write, placeholder, label, suggest, gift, dislikes){
   var list = h("ul", { class: "points" });
   var sugg = h("div", { class: "suggest", hidden: true });
   var words = null, blurTimer = null;
   function hideSuggest(){ sugg.textContent = ""; sugg.hidden = true; }
   function showSuggest(){
     sugg.textContent = "";
-    var v = input.value, q = v.trim().toLowerCase();
+    var mark = dislikes ? (input.value.match(NEG_MARK) || [""])[0] : "";
+    var v = input.value.slice(mark.length), q = v.trim().toLowerCase();
     // nur solange der Titel getippt wird, ab zwei Buchstaben
     if (!suggest || !prefs.suggest || q.length < 2 || /:\s|\s[-–—]\s|:$|\/\//.test(v)) { sugg.hidden = true; return; }
     if (!words) words = suggest();
@@ -1050,18 +1271,18 @@ function notesBlock(read, write, placeholder, label, suggest, gift){
     starts.concat(inner).slice(0, 6).forEach(function(w){
       sugg.appendChild(h("button", { class: "chip", type: "button", text: w, "aria-label": "Vorschlag " + w + " übernehmen",
         onmousedown: function(ev){ ev.preventDefault(); },   // Eingabefeld behält den Fokus
-        onclick: function(){ clearTimeout(blurTimer); input.value = w; hideSuggest(); input.focus(); } }));
+        onclick: function(){ clearTimeout(blurTimer); input.value = mark + w; hideSuggest(); input.focus(); } }));
     });
     sugg.hidden = !sugg.firstChild;
   }
   var input = h("input", { class: "field", type: "text", placeholder: placeholder, "aria-label": label, autocomplete: "off", enterkeyhint: "done" });
 
   function makeItem(n){
-    var li = h("li", { class: "point" });
+    var li = h("li", { class: "point" + (n.neg ? " neg" : "") });
     function fill(){
       li.textContent = "";
       var open = h("button", { class: "pointtext", type: "button", "aria-label": noteLabel(n) + " – Details ansehen und bearbeiten",
-        onclick: function(){ editPoint(n, fill); } },
+        onclick: function(){ editPoint(n, function(){ drawAll(); }, dislikes); } },
         h("span", { class: "pointtitle", text: n.title }));
       if (n.desc) open.appendChild(h("span", { class: "pointdesc", text: n.desc }));
       if (n.imgs && n.imgs.length) open.appendChild(h("span", { class: "pointmeta", text: n.imgs.length === 1 ? "1 Bild" : n.imgs.length + " Bilder" }));
@@ -1098,9 +1319,21 @@ function notesBlock(read, write, placeholder, label, suggest, gift){
         } }));
   }
   var archive = gift ? h("div", { class: "archive" }) : null;
+  var negBox = h("div");
   function drawAll(){
     list.textContent = "";
-    read().forEach(function(n){ if (!n.given) list.appendChild(makeItem(n)); });
+    negBox.textContent = "";
+    var negs = [];
+    read().forEach(function(n){
+      if (n.given) return;
+      if (n.neg) negs.push(n); else list.appendChild(makeItem(n));
+    });
+    if (negs.length) {
+      negBox.appendChild(h("div", { class: "neghead", text: "Mag nicht" }));
+      var ul = h("ul", { class: "points" });
+      negs.forEach(function(n){ ul.appendChild(makeItem(n)); });
+      negBox.appendChild(ul);
+    }
     if (!archive) return;
     archive.textContent = "";
     var items = read().filter(function(n){ return !!n.given; })
@@ -1116,15 +1349,18 @@ function notesBlock(read, write, placeholder, label, suggest, gift){
     archive.appendChild(ul);
   }
   function commit(){
-    var pt = parsePoint(input.value);
+    var raw = input.value, neg = false;
+    if (dislikes && NEG_MARK.test(raw) && raw.replace(NEG_MARK, "").trim()) { neg = true; raw = raw.replace(NEG_MARK, ""); }
+    var pt = parsePoint(raw);
     if (!pt.title) return;
     var n = { id: uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: [] };
+    if (neg) n.neg = true;
     write().push(n);
     input.value = "";
     hideSuggest();
     words = null;
     saveNow();
-    list.appendChild(makeItem(n));
+    drawAll();
   }
   // Angefangenes geht nicht verloren: kurz warten, falls gerade ein Vorschlag angetippt wird
   input.addEventListener("blur", function(){
@@ -1136,7 +1372,7 @@ function notesBlock(read, write, placeholder, label, suggest, gift){
   flushers.push(function(){ clearTimeout(blurTimer); commit(); });
   drawAll();
 
-  return h("div", null, list, sugg,
+  return h("div", null, list, negBox, sugg,
     h("form", { class: "row", onsubmit: function(ev){ ev.preventDefault(); commit(); input.focus(); } },
       input, h("button", { class: "btn icon", type: "submit", text: "+", "aria-label": "Notiz hinzufügen" })),
     archive);
@@ -1262,12 +1498,14 @@ function showImage(src, alt){
 }
 
 /* Titel, Beschreibung, Link und Bilder einer Notiz ansehen und ändern */
-function editPoint(n, redraw){
+function editPoint(n, redraw, dislikes){
   var title = h("input", { class: "field", type: "text", id: "pointTitle", autocomplete: "off", value: n.title });
   var desc = h("textarea", { class: "field", rows: "4", id: "pointDesc", value: n.desc || "" });
   var link = h("input", { class: "field", type: "text", inputmode: "url", id: "pointLink", placeholder: "https://…", autocomplete: "off", autocapitalize: "off", value: n.url || "" });
   var occasion = h("input", { class: "field", type: "text", id: "pointOccasion", placeholder: "z. B. Geburtstag 2026", autocomplete: "off", value: n.givenNote || "" });
   var givenAt = h("input", { class: "field", type: "date", id: "pointGivenAt", value: n.givenAt || "" });
+  var negBox = h("input", { type: "checkbox", id: "pointNeg" });
+  negBox.checked = !!n.neg;
   var giftBox = n.given ? h("div", null,
     h("label", { for: "pointOccasion", text: "Anlass" }), occasion,
     h("label", { for: "pointGivenAt", text: "Geschenkt am" }), givenAt) : null;
@@ -1322,12 +1560,14 @@ function editPoint(n, redraw){
     if (u === null) { toast("Das ist kein gültiger Link"); link.focus(); return; }
     n.title = t; n.desc = desc.value.trim(); n.url = u; n.imgs = imgs;
     if (n.given) { n.givenNote = occasion.value.trim().slice(0, 300); n.givenAt = givenAt.value || ""; }
+    if (dislikes) { if (negBox.checked) n.neg = true; else delete n.neg; }
     saveNow(); close(); redraw();
   }
   d.appendChild(h("form", { onsubmit: save },
     h("label", { for: "pointTitle", text: "Titel" }), title,
     h("label", { for: "pointDesc", text: "Beschreibung" }), desc,
     h("label", { for: "pointLink", text: "Link (leer lassen für keinen Link)" }), link,
+    dislikes ? h("label", { class: "check", for: "pointNeg" }, negBox, "Mag nicht") : null,
     giftBox,
     imgBox,
     h("div", { class: "row" },
@@ -1732,6 +1972,14 @@ function renderPeople(){
     return;
   }
 
+  var toReview = reviewItems().length;
+  if (toReview) {
+    var rb = h("div", { class: "banner" }, (toReview === 1 ? "1 Eintrag" : toReview + " Einträge") + " aus „Mag“ und „Mag nicht“ " + (toReview === 1 ? "wartet" : "warten") + " aufs Einsortieren. ",
+      h("button", { class: "btn quiet", text: "Jetzt einsortieren", onclick: reviewDialog }));
+    rb.style.marginTop = "12px";
+    app.appendChild(rb);
+    if (!reviewShown) setTimeout(function(){ if (!locked && view === "people" && !document.querySelector("dialog[open]")) reviewDialog(); }, 300);
+  }
   if (prefs.remind && daysSinceBackup() >= prefs.remind) {
     var remind = h("div", { class: "banner" }, readDate(BACKUP_KEY)
       ? "Dein letztes Backup ist " + daysSinceBackup() + " Tage alt. "
@@ -1893,17 +2141,32 @@ function renderPerson(){
       : "Noch nichts eingetragen. Tippe unten rechts auf den Stift, um alle Kategorien zu sehen." }));
   } else if (editMode) {
     app.appendChild(h("p", { class: "muted small", text:
-      "Notizen: „Titel: Beschreibung“ eintippen und Enter drücken. Der Doppelpunkt trennt beides, ein eingefügter Link wird automatisch hinterlegt. Ab zwei Buchstaben erscheinen Vorschläge zum Antippen." }));
+      "Notizen: „Titel: Beschreibung“ eintippen und Enter drücken. Der Doppelpunkt trennt beides, ein eingefügter Link wird automatisch hinterlegt. Ab zwei Buchstaben erscheinen Vorschläge zum Antippen. Wo es einen Bereich „Mag nicht“ gibt, kommt ein Eintrag mit „-“ davor dorthin (z. B. „- Rosinen“)." }));
   }
 
+  // Kategorien einer Gruppe (z. B. Essen & Trinken) stehen zusammen unter einer Überschrift
+  var groupSeen = {}, ordered = [], afterGroup = false, restHead = false;
   shown.forEach(function(c){
+    var g = c.group || "";
+    if (!g) {
+      if (afterGroup && !restHead) { ordered.push({ heading: "Weiteres" }); restHead = true; }
+      ordered.push(c);
+      return;
+    }
+    if (groupSeen[g]) return;
+    groupSeen[g] = true; afterGroup = true; restHead = false;
+    ordered.push({ heading: GROUP_NAMES[g] || g });
+    shown.forEach(function(x){ if ((x.group || "") === g) ordered.push(x); });
+  });
+  ordered.forEach(function(c){
+    if (c.heading) { app.appendChild(h("h2", { class: "grouphead", text: c.heading })); return; }
     var card = h("section", { class: "card" },
       h("div", { class: "cardhead" }, h("h3", { text: catName(c) }),
         h("button", { class: "btn quiet", icon: COPY_ICON, "aria-label": catName(c) + " kopieren", title: catName(c) + " kopieren", onclick: function(){
           flushPending();
           copyText(categoryText(p, c), "Hier ist noch nichts eingetragen");
         } })));
-    if (hasDetail(c) && c.subs.length) {
+    if ((c.ranked || hasDetail(c)) && c.subs.length) {
       card.appendChild(rankedBlock(p, c));
     } else if (c.subs.length) {
       var chips = h("div", { class: "chips" });
@@ -1928,7 +2191,8 @@ function renderPerson(){
       "Titel: Beschreibung",
       catName(c) + ": neue Notiz",
       function(){ return suggestionsFor(c, null); },
-      c.kind === "geschenk" ? p.id + ":" + c.id : ""));
+      c.kind === "geschenk" ? p.id + ":" + c.id : "",
+      !!c.dislikes));
     app.appendChild(card);
   });
 
@@ -1955,12 +2219,31 @@ function rankedBlock(p, c){
     var chosen = !e ? [] : c.ranked ? e.subs.map(function(id){ return subById(c, id); })
       : c.subs.filter(function(s){ return e.subs.indexOf(s.id) !== -1; });
 
+    // Ohne Notizen je Unterkategorie: kompakte Liste mit einer Zeile pro Eintrag
+    var lite = !c.detail ? h("ol", { class: "ranklite" }) : null;
+    if (lite && chosen.length) box.appendChild(lite);
     chosen.forEach(function(s, i){
+      var unpick = function(){
+        var en = editableEntry(p, c.id), at = en.subs.indexOf(s.id);
+        if (at !== -1) en.subs.splice(at, 1);
+        saveNow(); draw();
+      };
+      if (lite) {
+        lite.appendChild(h("li", null,
+          c.ranked ? h("span", { class: "ranknum", text: String(i + 1), "aria-label": "Platz " + (i + 1) }) : null,
+          h("span", { class: "rankname", text: subName(s) }),
+          c.ranked ? h("button", { class: "btn", type: "button", text: "↑", "aria-label": subName(s) + " einen Platz nach oben", disabled: i === 0,
+            onclick: function(){ shift(i, -1); } }) : null,
+          c.ranked ? h("button", { class: "btn", type: "button", text: "↓", "aria-label": subName(s) + " einen Platz nach unten", disabled: i === chosen.length - 1,
+            onclick: function(){ shift(i, 1); } }) : null,
+          h("button", { class: "btn danger", type: "button", text: "✕", "aria-label": subName(s) + " abwählen", onclick: unpick })));
+        return;
+      }
       var note = notesBlock(
         function(){ var en = p.entries[c.id]; return en && en.subNotes && en.subNotes[s.id] ? en.subNotes[s.id] : []; },
         function(){ var en = editableEntry(p, c.id); if (!en.subNotes[s.id]) en.subNotes[s.id] = []; return en.subNotes[s.id]; },
         "Titel: Beschreibung", "Neue Notiz zu " + subName(s),
-        function(){ return suggestionsFor(c, s); });
+        function(){ return suggestionsFor(c, s); }, "", !!c.dislikes);
       box.appendChild(h("div", { class: "rank" },
         h("div", { class: "rankhead" },
           c.ranked ? h("span", { class: "ranknum", text: String(i + 1), "aria-label": "Platz " + (i + 1) }) : null,
@@ -2004,7 +2287,7 @@ function rankedBlock(p, c){
 function readPoints(notes){
   var ul = h("ul", { class: "readpoints" });
   notes.forEach(function(n){
-    var li = h("li", null, h("b", { text: n.title }));
+    var li = h("li", { class: n.neg ? "neg" : null }, h("b", { text: n.title }));
     if (n.desc) li.appendChild(h("span", { class: "readdesc", text: n.desc }));
     if (n.url) li.appendChild(h("a", { href: n.url, target: "_blank", rel: "noopener noreferrer", text: "Link öffnen" }));
     ul.appendChild(li);
@@ -2016,7 +2299,7 @@ function readPoints(notes){
 /* Was eine Person in einer Kategorie eingetragen hat, zum Lesen */
 function entryView(p, cat){
   var e = entryOf(p, cat), box = h("div");
-  if (e.detail && e.items.length) {
+  if (e.listed && e.items.length) {
     var ol = h(e.ranked ? "ol" : "ul", { class: "ranklist" });
     e.items.forEach(function(it){
       var li = h("li", null, h("b", { text: it.name }));
@@ -2030,7 +2313,8 @@ function entryView(p, cat){
     box.appendChild(tags);
   }
   if (e.notes.length) box.appendChild(readPoints(e.notes));
-  if (!e.subs.length && !e.notes.length) box.appendChild(h("div", { class: "muted", text: e.archive.length ? "Keine offenen Wünsche" : "Noch nichts eingetragen" }));
+  if (e.dislikes.length) { box.appendChild(h("div", { class: "neghead", text: "Mag nicht" })); box.appendChild(readPoints(e.dislikes)); }
+  if (!e.subs.length && !e.notes.length && !e.dislikes.length) box.appendChild(h("div", { class: "muted", text: e.archive.length ? "Keine offenen Wünsche" : "Noch nichts eingetragen" }));
   if (e.archive.length) box.appendChild(h("div", { class: "muted small", text: e.archive.length + " im Geschenkarchiv" }));
   return box;
 }
@@ -2068,7 +2352,7 @@ function chipGroup(all, shown, label, isOn, setOn, changed, more){
 }
 
 /* Diese Kategorien stehen im Vergleich von Anfang an zur Auswahl, in dieser Reihenfolge; alle anderen kommen über das + */
-var COMPARE_FIRST = ["ernaehrung", "mag", "magnicht", "allergien", "suess", "kuchen", "pizza"];
+var COMPARE_FIRST = ["vorlieben", "essen", "allergien", "suess", "kuchen", "pizza", "tee"];
 
 /* Die Kategorien, die im Vergleich von Anfang an zur Auswahl stehen: selbst festgelegt oder die Vorgabe */
 function compareFirstCats(allCats){
@@ -2360,18 +2644,22 @@ function renderSettings(){
 
     var detailBox = h("input", { type: "checkbox", onchange: function(){
       c.detail = detailBox.checked;
-      if (!c.detail) { c.ranked = false; rankBox.checked = false; }
       saveNow();
     } });
     var rankBox = h("input", { type: "checkbox", onchange: function(){
       c.ranked = rankBox.checked;
-      if (c.ranked) { c.detail = true; detailBox.checked = true; }
       saveNow();
     } });
     detailBox.checked = hasDetail(c);
     rankBox.checked = !!c.ranked;
-    body.appendChild(h("label", { class: "check small" }, detailBox, "Auswahl über + mit eigenen Notizen je Unterkategorie"));
-    body.appendChild(h("label", { class: "check small" }, rankBox, "Zusätzlich mit Rangfolge"));
+    body.appendChild(h("label", { class: "check small" }, rankBox, "Unterkategorien mit Rangfolge (Auswahl über +)"));
+    body.appendChild(h("label", { class: "check small" }, detailBox, "Eigene Notizen je Unterkategorie (Auswahl über +)"));
+    var dislikeBox = h("input", { type: "checkbox", onchange: function(){ c.dislikes = dislikeBox.checked; saveNow(); } });
+    dislikeBox.checked = !!c.dislikes;
+    body.appendChild(h("label", { class: "check small" }, dislikeBox, "Mit Bereich „Mag nicht“"));
+    var groupBox = h("input", { type: "checkbox", onchange: function(){ c.group = groupBox.checked ? "essen" : ""; saveNow(); } });
+    groupBox.checked = c.group === "essen";
+    body.appendChild(h("label", { class: "check small" }, groupBox, "Unter „Essen & Trinken“ einordnen"));
 
     line.appendChild(h("button", { class: "btn quiet danger morebtn", type: "button", text: "Löschen", "aria-label": "Kategorie " + catName(c) + " löschen", onclick: function(){
       var filled = state.people.filter(function(p){ return isFilled(p, c); }).length;
@@ -2842,6 +3130,8 @@ function importPerson(raw){
     return notes.map(function(n){
       var c = { id: uid(), title: n.title, desc: n.desc, url: n.url, imgs: (n.imgs || []).slice() };
       if (n.given) { c.given = true; c.givenNote = n.givenNote || ""; c.givenAt = n.givenAt || ""; }
+      if (n.neg) c.neg = true;
+      if (n.review) { c.review = true; c.suggest = n.suggest || ""; }
       return c;
     });
   }
@@ -2850,7 +3140,7 @@ function importPerson(raw){
     var se = sp.entries[sc.id];
     if (!se) return;
     var tc = state.categories.filter(function(c){ return key(c) === key(sc); })[0];
-    if (!tc) { tc = { id: uid(), name: sc.name, kind: sc.kind, ranked: sc.ranked, detail: sc.detail, hidden: false, subs: [] }; state.categories.push(tc); newCats++; }
+    if (!tc) { tc = { id: uid(), name: sc.name, kind: sc.kind, ranked: sc.ranked, detail: sc.detail, hidden: false, dislikes: sc.dislikes, group: sc.group, subs: [] }; state.categories.push(tc); newCats++; }
     var map = {};
     sc.subs.forEach(function(ss){
       var used = se.subs.indexOf(ss.id) !== -1 || ((se.subNotes[ss.id] || []).length > 0);
@@ -2953,11 +3243,9 @@ function normLabel(v){
 /* Übliche Überschriften in den Notizen, zugeordnet zu Kategorien bzw. Feldern der Visitenkarte */
 var CN_KIND_LABELS = {
   geschenk: ["geschenkideen", "geschenke", "geschenkidee", "wuensche", "wunschliste", "wunsch"],
-  mag: ["mag", "mag gerne", "mag gern", "vorlieben"],
-  magnicht: ["mag nicht", "mag nicht gern", "mag keine", "mag kein", "abneigungen", "no go", "no gos"],
-  ernaehrung: ["ernaehrung"],
+  vorlieben: ["vorlieben", "interessen", "hobbys", "hobbies", "hobby", "freizeit"],
   allergien: ["allergien", "allergie", "unvertraeglichkeiten", "unvertraeglichkeit"],
-  essen: ["lieblingsessen", "essen", "lieblingsgericht"],
+  essen: ["essen", "lieblingsessen", "lieblingsgericht", "ernaehrung"],
   suess: ["suessigkeiten", "suesses", "naschen"],
   kuchen: ["kuchen", "torten"],
   pizza: ["pizza"],
@@ -2967,7 +3255,7 @@ var CN_KIND_LABELS = {
   farbe: ["lieblingsfarbe", "farbe", "farben", "lieblingsfarben"],
   jga: ["junggesellinnenabschied", "jga", "junggesellenabschied"],
   soft: ["softdrinks"], wein: ["wein bier"], eis: ["eis", "eissorten"], restaurant: ["restaurants"],
-  hobby: ["hobbys", "hobbies", "hobby"], groesse: ["groessen"], duft: ["duefte", "duft", "parfum"],
+  groesse: ["groessen"], duft: ["duefte", "duft", "parfum"],
   medien: ["buecher filme musik"], reise: ["reiseziele", "reisen", "urlaub"]
 };
 var CN_CARD_LABELS = {
@@ -2983,6 +3271,12 @@ function cnResolve(label){
   if (!n) return null;
   Object.keys(CN_CARD_LABELS).some(function(f){ if (CN_CARD_LABELS[f].indexOf(n) !== -1) { hit = { type: "card", field: f }; return true; } });
   if (hit) return hit;
+  // „Mag“ und „Mag nicht“: in die Vorlieben, zum späteren Einsortieren markiert
+  var likeLabels = ["mag", "mag gerne", "mag gern"], dislikeLabels = ["mag nicht", "mag nicht gern", "mag keine", "mag kein", "abneigungen", "no go", "no gos"];
+  if (likeLabels.indexOf(n) !== -1 || dislikeLabels.indexOf(n) !== -1) {
+    var vor = state.categories.filter(function(c){ return c.kind === "vorlieben"; })[0];
+    if (vor) return { type: "cat", cat: vor, review: true, neg: dislikeLabels.indexOf(n) !== -1 };
+  }
   state.categories.some(function(c){ if (normLabel(c.name) === n) { hit = { type: "cat", cat: c }; return true; } });
   if (hit) return hit;
   Object.keys(CN_KIND_LABELS).some(function(k){
@@ -3037,11 +3331,15 @@ function cnBirthday(v){
 function cnApply(person, parsed, newCats){
   var card = cardOf(person);
   function addText(field, v){ card[field] = card[field] ? card[field] + (field === "other" || field === "address" ? "\n" : ", ") + v : v; }
-  function pushNote(list, v){
+  function pushNote(list, v, flags){
     var pt = parsePoint(v);
     if (!pt.title) return;
     var exists = list.some(function(n){ return normLabel(n.title) === normLabel(pt.title) && normLabel(n.desc) === normLabel(pt.desc); });
-    if (!exists) list.push({ id: uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: [] });
+    if (exists) return;
+    var n = { id: uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: [] };
+    if (flags && flags.neg) n.neg = true;
+    if (flags && flags.review) { n.review = true; n.suggest = foodGuess(pt.title); }
+    list.push(n);
   }
   function tick(cat, sub){
     var e = editableEntry(person, cat.id);
@@ -3082,7 +3380,7 @@ function cnApply(person, parsed, newCats){
     }
     g.values.forEach(function(v){
       var sub = cat.subs.filter(function(x){ return normLabel(x.name) === normLabel(v); })[0];
-      if (sub) tick(cat, sub); else pushNote(editableEntry(person, cat.id).notes, v);
+      if (sub && !t.neg && !t.review) tick(cat, sub); else pushNote(editableEntry(person, cat.id).notes, v, t);
     });
   });
 }
@@ -3167,6 +3465,68 @@ function colorNotePreview(notes){
   if (locked) d.appendChild(h("p", { class: "muted small", text: (locked === 1 ? "1 gesperrte Notiz kann" : locked + " gesperrte Notizen können") + " nicht gelesen werden und " + (locked === 1 ? "wird" : "werden") + " übersprungen." }));
   d.appendChild(list);
   d.appendChild(h("div", { class: "row" }, h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }), goBtn));
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+}
+
+/* ---------- Prüfliste: Einträge aus „Mag“/„Mag nicht“ einsortieren ---------- */
+function reviewItems(){
+  var out = [];
+  state.people.forEach(function(p){
+    state.categories.forEach(function(c){
+      var e = p.entries[c.id];
+      (e && e.notes || []).forEach(function(n){ if (n.review) out.push({ person: p, cat: c, note: n }); });
+    });
+  });
+  return out;
+}
+var reviewShown = false;
+function reviewDialog(){
+  var items = reviewItems();
+  if (!items.length) return;
+  reviewShown = true;
+  var targets = state.categories.filter(function(c){ return c.dislikes || c.kind === "vorlieben"; });
+  var d = h("dialog", null), list = h("ul", { class: "revlist" });
+  function close(){ d.remove(); }
+  var lastPerson = null;
+  items.sort(function(a, b){ return byName(a.person, b.person); }).forEach(function(it){
+    if (it.person !== lastPerson) { lastPerson = it.person; list.appendChild(h("li", { class: "whorow" }, h("div", { class: "who", text: displayName(it.person) }))); }
+    var sel = h("select", { class: "field", "aria-label": "Kategorie für " + it.note.title });
+    var pick = state.categories.filter(function(c){ return c.kind === it.note.suggest; })[0] || it.cat;
+    targets.forEach(function(c){
+      var o = h("option", { value: c.id, text: catName(c) + (c.hidden ? " (ausgeblendet)" : "") });
+      if (c === pick) o.selected = true;
+      sel.appendChild(o);
+    });
+    it.select = sel;
+    list.appendChild(h("li", null,
+      h("span", { class: "revtitle" }, noteLabel(it.note), it.note.neg ? h("span", { class: "revneg", text: "mag nicht" }) : null),
+      sel));
+  });
+  function apply(){
+    var moved = 0;
+    items.forEach(function(it){
+      var n = it.note, target = state.categories.filter(function(c){ return c.id === it.select.value; })[0] || it.cat;
+      delete n.review; delete n.suggest;
+      if (target === it.cat) return;
+      var src = editableEntry(it.person, it.cat.id), at = src.notes.indexOf(n);
+      if (at !== -1) src.notes.splice(at, 1);
+      var e = editableEntry(it.person, target.id);
+      target.hidden = false;
+      var sub = !n.neg && target.subs.filter(function(x){ return normLabel(x.name) === normLabel(n.title) && !n.desc; })[0];
+      if (sub) { if (e.subs.indexOf(sub.id) === -1) e.subs.push(sub.id); }
+      else if (!e.notes.some(function(x){ return normLabel(x.title) === normLabel(n.title) && !!x.neg === !!n.neg; })) e.notes.push(n);
+      moved++;
+    });
+    saveNow(); close(); render();
+    toast(moved === 1 ? "1 Eintrag verschoben" : moved + " Einträge verschoben");
+  }
+  d.appendChild(h("h3", { text: "Einträge einsortieren" }));
+  d.appendChild(h("p", { class: "small", text: "„Mag“ und „Mag nicht“ gibt es nicht mehr als eigene Kategorien. Prüfe, wohin jeder Eintrag gehört; vorgeschlagen ist eine Einschätzung. Was in „Vorlieben“ bleibt, ist z. B. Wandern oder Kajaken." }));
+  d.appendChild(list);
+  d.appendChild(h("div", { class: "row" },
+    h("button", { class: "btn", type: "button", text: "Später", onclick: close }),
+    h("button", { class: "btn primary", type: "button", text: "Übernehmen", onclick: apply })));
   d.addEventListener("close", close);
   document.body.appendChild(d); showDialog(d);
 }
