@@ -280,7 +280,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "12.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "12.10.2026 (2)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -1457,6 +1457,7 @@ function recoverSuccess(){
   locked = false; recovered = true; wrongTries = 0; hiddenAt = 0;
   lock.rec.delayUntil = 0; saveLock();
   secOpen = true; view = "settings"; currentPersonId = null;
+  enterSub();
   render(); window.scrollTo(0, 0);
   toast("Entsperrt. Vergib jetzt eine neue PIN.");
 }
@@ -1648,7 +1649,35 @@ navButtons.forEach(function(b){
   b.addEventListener("click", function(){ go(b.getAttribute("data-view")); });
 });
 
-function go(v, personId){
+/* Zurück-Taste des Handys: Jede Ansicht außer der Personenliste bekommt einen Eintrag im Verlauf.
+   „Zurück“ schließt erst einen offenen Dialog, dann geht es zur Personenliste, erst dort verlässt man die App. */
+var inSubview = false, skipPop = false;
+function enterSub(){
+  if (inSubview) return;
+  try { history.pushState({ merkbuch: 1 }, ""); inSubview = true; } catch (e) {}
+}
+function closeTopDialog(){
+  var open = Array.prototype.filter.call(document.querySelectorAll("dialog"), function(d){ return d.open || d.hasAttribute("open"); });
+  if (!open.length) return false;
+  var top = open[open.length - 1];
+  if (top.id === "dlg") { top.dispatchEvent(new Event("cancel", { cancelable: true })); if (top.open) top.close(); }
+  else top.remove();
+  return true;
+}
+window.addEventListener("popstate", function(){
+  if (skipPop) { skipPop = false; return; }
+  var hadSub = inSubview;
+  inSubview = false;
+  if (closeTopDialog()) { if (hadSub) enterSub(); return; }   // nur den Dialog schließen, in der Ansicht bleiben
+  if (!locked && view !== "people") go("people", null, true);
+});
+
+function go(v, personId, fromPop){
+  if (!fromPop) {
+    if (v === "people") {
+      if (inSubview) { inSubview = false; skipPop = true; try { history.back(); } catch (e) { skipPop = false; } }
+    } else enterSub();
+  }
   flushPending();
   if (saveTimer) saveNow();
   if (v === "people") editMode = !!prefs.startEdit;   // Personen öffnen sich in der eingestellten Startansicht
