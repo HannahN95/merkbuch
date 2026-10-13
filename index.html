@@ -244,6 +244,11 @@ dialog.viewer{padding:12px;max-width:min(96vw,640px)}
 .readdesc{display:block;font-size:.9rem;color:var(--muted);white-space:pre-wrap}
 .pointlink{display:inline-block;padding:0 10px 10px;color:var(--accent);font-weight:600;font-size:.9rem;overflow-wrap:anywhere}
 .point .btn{min-height:44px;width:44px}
+.point .pointbody{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.point.dragging{opacity:.3}
+.dragghost{position:fixed;z-index:1000;margin:0;pointer-events:none;list-style:none;opacity:.95;transform:scale(1.03);box-shadow:0 10px 28px rgba(0,0,0,.28);border-radius:12px;background:var(--surface)}
+.card.droptarget{outline:3px solid var(--accent);outline-offset:2px}
+body.notedrag{-webkit-user-select:none;user-select:none}
 .suggest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .suggest .chip{min-height:40px;padding:4px 12px;font-size:.95rem;background:var(--surface)}
 .readpoints{margin:4px 0 0;padding-left:20px}
@@ -302,7 +307,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "12.10.2026 (6)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "13.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -409,8 +414,8 @@ var DEFAULT_CATS = [
   ["Essen", ESSEN_SUBS],
   ["Süßigkeiten", ["Schokolade", "Chips", "Kekse", "Fruchtgummi"], true],
   ["Kuchen", ["Kuchen", "Torte"]],
-  ["Pizza", ["Scharf"]],
-  ["Getränke", ["Mit Alkohol", "Alkoholfrei"]],
+  ["Pizza", []],
+  ["Getränke", ["Alkoholfrei"]],
   ["Tee & Kaffee", TEE_SUBS],
   // Weiteres
   ["Blumen", ["Schnittblumen", "Topfpflanzen"]],
@@ -524,7 +529,7 @@ function uid(){ idCounter++; return Date.now().toString(36) + idCounter.toString
 
 function freshState(){
   return {
-    version: 14,
+    version: 15,
     categories: DEFAULT_CATS.filter(function(d){ return d[0] !== "PartnerIn"; }).map(makeCat),
     people: []
   };
@@ -919,25 +924,25 @@ function migrate(s){
     }
     s.version = 13;
   }
-  if (s.version < 14) {
-    var kindOf2 = function(k){ return s.categories.filter(function(c){ return c.kind === k; })[0]; };
-    // Optionen entfernen; wer sie angekreuzt hatte, behält die Angabe als Eintrag
-    var dropSubs = function(cat, names){
-      if (!cat) return;
-      var gone = cat.subs.filter(function(x){ return names.map(normLabel).indexOf(normLabel(x.name)) !== -1; });
-      if (!gone.length) return;
-      s.people.forEach(function(p){
-        var e = p.entries[cat.id];
-        if (!e) return;
-        gone.forEach(function(g){
-          var at = (e.subs || []).indexOf(g.id);
-          if (at !== -1) { e.subs.splice(at, 1); (e.notes || (e.notes = [])).push({ id: uid(), title: g.name, desc: "", url: "", imgs: [] }); }
-          ((e.subNotes || {})[g.id] || []).forEach(function(n){ n.title = g.name + " – " + n.title; (e.notes || (e.notes = [])).push(n); });
-          if (e.subNotes) delete e.subNotes[g.id];
-        });
+  var kindOf2 = function(k){ return s.categories.filter(function(c){ return c.kind === k; })[0]; };
+  // Optionen entfernen; wer sie angekreuzt hatte, behält die Angabe als Eintrag
+  var dropSubs = function(cat, names){
+    if (!cat) return;
+    var gone = cat.subs.filter(function(x){ return names.map(normLabel).indexOf(normLabel(x.name)) !== -1; });
+    if (!gone.length) return;
+    s.people.forEach(function(p){
+      var e = p.entries[cat.id];
+      if (!e) return;
+      gone.forEach(function(g){
+        var at = (e.subs || []).indexOf(g.id);
+        if (at !== -1) { e.subs.splice(at, 1); (e.notes || (e.notes = [])).push({ id: uid(), title: g.name, desc: "", url: "", imgs: [] }); }
+        ((e.subNotes || {})[g.id] || []).forEach(function(n){ n.title = g.name + " – " + n.title; (e.notes || (e.notes = [])).push(n); });
+        if (e.subNotes) delete e.subNotes[g.id];
       });
-      cat.subs = cat.subs.filter(function(x){ return gone.indexOf(x) === -1; });
-    };
+    });
+    cat.subs = cat.subs.filter(function(x){ return gone.indexOf(x) === -1; });
+  };
+  if (s.version < 14) {
     dropSubs(kindOf2("pizza"), ["Vegetarisch", "Mit Fleisch"]);
     dropSubs(kindOf2("essen"), ["Pescetarisch", "Kein Alkohol"]);
     // Süßigkeiten: Rangfolge bleibt, aber nur noch ein Eingabefeld für die ganze Kategorie
@@ -958,6 +963,33 @@ function migrate(s){
       sweets.ranked = true; sweets.detail = false;
     }
     s.version = 14;
+  }
+  if (s.version < 15) {
+    dropSubs(kindOf2("pizza"), ["Scharf"]);
+    dropSubs(kindOf2("cocktails"), ["Mit Alkohol"]);
+    // Aus ColorNote übernommene Kategorien entfernen; ihre Einträge landen bei den Geschenkideen
+    var goneNames = ["Pflanzen für Garten", "Pflanzen für den Garten", "Wenn wir Haus haben", "Wenn wir ein Haus haben"].map(normLabel);
+    var gift = kindOf2("geschenk");
+    var goneCats = s.categories.filter(function(c){ return goneNames.indexOf(normLabel(c.name)) !== -1; });
+    goneCats.forEach(function(c){
+      s.people.forEach(function(p){
+        var e = p.entries[c.id];
+        if (!e) return;
+        delete p.entries[c.id];
+        var moved = (e.notes || []).slice();
+        Object.keys(e.subNotes || {}).forEach(function(k){ moved = moved.concat(e.subNotes[k] || []); });
+        if (!moved.length) return;
+        if (!gift) return;
+        var ge = p.entries[gift.id] || (p.entries[gift.id] = { notes: [], subs: [], subNotes: {} });
+        if (!ge.notes) ge.notes = [];
+        moved.forEach(function(n){
+          if (!n.desc) n.desc = c.name.trim();
+          ge.notes.push(n);
+        });
+      });
+    });
+    s.categories = s.categories.filter(function(c){ return goneCats.indexOf(c) === -1; });
+    s.version = 15;
   }
   return s;
 }
@@ -1282,7 +1314,7 @@ function notesBlock(read, write, placeholder, label, suggest, gift, dislikes){
     function fill(){
       li.textContent = "";
       var open = h("button", { class: "pointtext", type: "button", "aria-label": noteLabel(n) + " – Details ansehen und bearbeiten",
-        onclick: function(){ editPoint(n, function(){ drawAll(); }, dislikes); } },
+        onclick: function(){ if (Date.now() - dragEndedAt < 500) return; editPoint(n, function(){ drawAll(); }, dislikes); } },
         h("span", { class: "pointtitle", text: n.title }));
       if (n.desc) open.appendChild(h("span", { class: "pointdesc", text: n.desc }));
       if (n.imgs && n.imgs.length) open.appendChild(h("span", { class: "pointmeta", text: n.imgs.length === 1 ? "1 Bild" : n.imgs.length + " Bilder" }));
@@ -1299,6 +1331,7 @@ function notesBlock(read, write, placeholder, label, suggest, gift, dislikes){
         } }));
     }
     fill();
+    dragNote(li, n, write);
     return li;
   }
   // Archivierter Wunsch: gestrichelt, mit Anlass und Datum; lässt sich zurückholen
@@ -1376,6 +1409,112 @@ function notesBlock(read, write, placeholder, label, suggest, gift, dislikes){
     h("form", { class: "row", onsubmit: function(ev){ ev.preventDefault(); commit(); input.focus(); } },
       input, h("button", { class: "btn icon", type: "submit", text: "+", "aria-label": "Notiz hinzufügen" })),
     archive);
+}
+
+/* Gedrückt halten und ziehen: verschiebt eine Notiz in eine andere Kategorie derselben Person */
+var dragEndedAt = 0;
+function dragNote(li, n, write){
+  var timer = null, sx = 0, sy = 0, lx = 0, ly = 0, offY = 0, ghost = null, target = null, active = false, raf = 0;
+  function cancelTimer(){ clearTimeout(timer); timer = null; }
+  function targetAt(x, y){
+    var el = document.elementFromPoint(x, y);
+    return el && el.closest ? el.closest("[data-cat]") : null;
+  }
+  function mark(t){
+    if (t === target) return;
+    if (target) target.classList.remove("droptarget");
+    target = t;
+    if (target) target.classList.add("droptarget");
+  }
+  function begin(){
+    active = true;
+    var r = li.getBoundingClientRect();
+    offY = sy - r.top;
+    ghost = li.cloneNode(true);
+    ghost.classList.add("dragghost");
+    ghost.style.width = r.width + "px";
+    ghost.style.left = r.left + "px";
+    document.body.appendChild(ghost);
+    li.classList.add("dragging");
+    document.body.classList.add("notedrag");
+    try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
+    move(sx, sy);
+    raf = requestAnimationFrame(edgeScroll);
+  }
+  function move(x, y){
+    lx = x; ly = y;
+    ghost.style.top = (y - offY) + "px";
+    mark(targetAt(x, y));
+  }
+  // am oberen bzw. unteren Rand wird weitergescrollt
+  function edgeScroll(){
+    if (!active) return;
+    var edge = 80, hgt = window.innerHeight, dy = 0;
+    if (ly < edge) dy = -Math.ceil((edge - ly) / 6);
+    else if (ly > hgt - edge) dy = Math.ceil((ly - (hgt - edge)) / 6);
+    if (dy) { window.scrollBy(0, dy); mark(targetAt(lx, ly)); }
+    raf = requestAnimationFrame(edgeScroll);
+  }
+  function finish(dropIt){
+    var t = target;
+    active = false;
+    cancelAnimationFrame(raf);
+    mark(null);
+    if (ghost) ghost.remove();
+    ghost = null;
+    li.classList.remove("dragging");
+    document.body.classList.remove("notedrag");
+    dragEndedAt = Date.now();
+    if (!dropIt || !t) return;
+    var p = state.people.filter(function(x){ return x.id === currentPersonId; })[0];
+    var cat = state.categories.filter(function(c){ return c.id === t.getAttribute("data-cat"); })[0];
+    if (!p || !cat) return;
+    var src = write(), dst = editableEntry(p, cat.id).notes;
+    if (src === dst) return;
+    var at = src.indexOf(n);
+    if (at === -1) return;
+    src.splice(at, 1);
+    dst.push(n);
+    delete n.review; delete n.suggest;
+    saveNow(); render();
+    toast("„" + n.title + "“ nach „" + catName(cat) + "“ verschoben");
+  }
+  function startAt(x, y, target0){
+    if (target0.closest("a, .btn")) return false;
+    sx = lx = x; sy = ly = y;
+    cancelTimer();
+    timer = setTimeout(function(){ timer = null; begin(); }, 450);
+    return true;
+  }
+  function farFromStart(x, y){ return Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10; }
+
+  li.addEventListener("touchstart", function(ev){
+    if (ev.touches.length !== 1 || active) { cancelTimer(); return; }
+    startAt(ev.touches[0].clientX, ev.touches[0].clientY, ev.target);
+  }, { passive: true });
+  li.addEventListener("touchmove", function(ev){
+    var t = ev.touches[0];
+    if (active) { if (ev.cancelable) ev.preventDefault(); move(t.clientX, t.clientY); return; }
+    if (timer && farFromStart(t.clientX, t.clientY)) cancelTimer();
+  }, { passive: false });
+  li.addEventListener("touchend", function(ev){
+    cancelTimer();
+    if (active) { if (ev.cancelable) ev.preventDefault(); finish(true); }
+  });
+  li.addEventListener("touchcancel", function(){ cancelTimer(); if (active) finish(false); });
+  li.addEventListener("contextmenu", function(ev){ if (timer || active) ev.preventDefault(); });
+  // mit der Maus genauso: Taste gedrückt halten, dann ziehen
+  li.addEventListener("mousedown", function(ev){
+    if (ev.button !== 0 || !startAt(ev.clientX, ev.clientY, ev.target)) return;
+    function mm(e){
+      if (active) { e.preventDefault(); move(e.clientX, e.clientY); }
+      else if (timer && farFromStart(e.clientX, e.clientY)) { cancelTimer(); off(); }
+    }
+    function mu(){ cancelTimer(); off(); if (active) finish(true); }
+    function off(){ document.removeEventListener("mousemove", mm); document.removeEventListener("mouseup", mu); }
+    document.addEventListener("mousemove", mm);
+    document.addEventListener("mouseup", mu);
+  });
 }
 
 /* Wunsch als geschenkt markieren: fragt nach dem Anlass und legt ihn ins Geschenkarchiv */
@@ -1499,9 +1638,9 @@ function showImage(src, alt){
 
 /* Titel, Beschreibung, Link und Bilder einer Notiz ansehen und ändern */
 function editPoint(n, redraw, dislikes){
-  var title = h("input", { class: "field", type: "text", id: "pointTitle", autocomplete: "off", value: n.title });
+  var title = h("input", { class: "field", type: "text", id: "pointTitle", autocomplete: "off", enterkeyhint: "done", value: n.title });
   var desc = h("textarea", { class: "field", rows: "4", id: "pointDesc", value: n.desc || "" });
-  var link = h("input", { class: "field", type: "text", inputmode: "url", id: "pointLink", placeholder: "https://…", autocomplete: "off", autocapitalize: "off", value: n.url || "" });
+  var link = h("input", { class: "field", type: "text", inputmode: "url", id: "pointLink", placeholder: "https://…", autocomplete: "off", autocapitalize: "off", enterkeyhint: "done", value: n.url || "" });
   var occasion = h("input", { class: "field", type: "text", id: "pointOccasion", placeholder: "z. B. Geburtstag 2026", autocomplete: "off", value: n.givenNote || "" });
   var givenAt = h("input", { class: "field", type: "date", id: "pointGivenAt", value: n.givenAt || "" });
   var negBox = h("input", { type: "checkbox", id: "pointNeg" });
@@ -1563,6 +1702,12 @@ function editPoint(n, redraw, dislikes){
     if (dislikes) { if (negBox.checked) n.neg = true; else delete n.neg; }
     saveNow(); close(); redraw();
   }
+  // Enter im Titel- oder Linkfeld beendet die Eingabe (statt ins nächste Feld zu springen)
+  [title, link, occasion].forEach(function(el){
+    el.addEventListener("keydown", function(ev){
+      if (ev.key === "Enter" && !ev.isComposing) save(ev);
+    });
+  });
   d.appendChild(h("form", { onsubmit: save },
     h("label", { for: "pointTitle", text: "Titel" }), title,
     h("label", { for: "pointDesc", text: "Beschreibung" }), desc,
@@ -2141,7 +2286,7 @@ function renderPerson(){
       : "Noch nichts eingetragen. Tippe unten rechts auf den Stift, um alle Kategorien zu sehen." }));
   } else if (editMode) {
     app.appendChild(h("p", { class: "muted small", text:
-      "Notizen: „Titel: Beschreibung“ eintippen und Enter drücken. Der Doppelpunkt trennt beides, ein eingefügter Link wird automatisch hinterlegt. Ab zwei Buchstaben erscheinen Vorschläge zum Antippen. Wo es einen Bereich „Mag nicht“ gibt, kommt ein Eintrag mit „-“ davor dorthin (z. B. „- Rosinen“)." }));
+      "Notizen: „Titel: Beschreibung“ eintippen und Enter drücken. Der Doppelpunkt trennt beides, ein eingefügter Link wird automatisch hinterlegt. Ab zwei Buchstaben erscheinen Vorschläge zum Antippen. Wo es einen Bereich „Mag nicht“ gibt, kommt ein Eintrag mit „-“ davor dorthin (z. B. „- Rosinen“). Eine Notiz gedrückt halten und ziehen verschiebt sie in eine andere Kategorie." }));
   }
 
   // Kategorien einer Gruppe (z. B. Essen & Trinken) stehen zusammen unter einer Überschrift
@@ -2160,7 +2305,7 @@ function renderPerson(){
   });
   ordered.forEach(function(c){
     if (c.heading) { app.appendChild(h("h2", { class: "grouphead", text: c.heading })); return; }
-    var card = h("section", { class: "card" },
+    var card = h("section", { class: "card", "data-cat": c.id },
       h("div", { class: "cardhead" }, h("h3", { text: catName(c) }),
         h("button", { class: "btn quiet", icon: COPY_ICON, "aria-label": catName(c) + " kopieren", title: catName(c) + " kopieren", onclick: function(){
           flushPending();
