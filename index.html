@@ -240,6 +240,21 @@ body.sorting{-webkit-user-select:none;user-select:none}
 .thumbx{position:absolute;top:-8px;right:-8px;width:32px;height:32px;padding:0;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:#C0263B;font-weight:700;cursor:pointer}
 .addimg{margin-bottom:14px}
 dialog.viewer{padding:12px;max-width:min(96vw,640px)}
+dialog.pointdlg{padding:14px 16px 0;width:min(92vw,420px)}
+dialog.pointdlg h3{margin:0 0 6px}
+dialog.pointdlg p{margin-bottom:10px}
+dialog.pointdlg label{font-size:.85rem;margin:0 0 4px}
+dialog.pointdlg .field{margin-bottom:10px;min-height:44px;padding:8px 12px}
+dialog.pointdlg textarea.field{min-height:44px;resize:none}
+dialog.pointdlg .check{margin:0 0 10px;font-size:.95rem;gap:8px}
+dialog.pointdlg .thumbs{grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 0 10px}
+dialog.pointdlg .thumbx{width:26px;height:26px;top:-6px;right:-6px;font-size:.8rem}
+.pdgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pdtools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.btn.small{min-height:36px;padding:4px 10px;font-size:.85rem;border-radius:10px}
+.pdfoot{position:sticky;bottom:0;margin:0 -16px;padding:10px 16px 14px;background:var(--surface);border-top:1.5px solid var(--line)}
+.mergelist{max-height:46vh;overflow:auto;margin-bottom:12px}
+.mergelist label span{overflow-wrap:anywhere}
 .viewer img{display:block;max-width:100%;max-height:70vh;margin:0 auto 12px;border-radius:10px}
 .readdesc{display:block;font-size:.9rem;color:var(--muted);white-space:pre-wrap}
 .pointlink{display:inline-block;padding:0 10px 10px;color:var(--accent);font-weight:600;font-size:.9rem;overflow-wrap:anywhere}
@@ -307,7 +322,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "13.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "16.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -1314,7 +1329,7 @@ function notesBlock(read, write, placeholder, label, suggest, gift, dislikes){
     function fill(){
       li.textContent = "";
       var open = h("button", { class: "pointtext", type: "button", "aria-label": noteLabel(n) + " – Details ansehen und bearbeiten",
-        onclick: function(){ if (Date.now() - dragEndedAt < 500) return; editPoint(n, function(){ drawAll(); }, dislikes); } },
+        onclick: function(){ if (Date.now() - dragEndedAt < 500) return; editPoint(n, function(){ drawAll(); }, dislikes, write); } },
         h("span", { class: "pointtitle", text: n.title }));
       if (n.desc) open.appendChild(h("span", { class: "pointdesc", text: n.desc }));
       if (n.imgs && n.imgs.length) open.appendChild(h("span", { class: "pointmeta", text: n.imgs.length === 1 ? "1 Bild" : n.imgs.length + " Bilder" }));
@@ -1636,24 +1651,26 @@ function showImage(src, alt){
   document.body.appendChild(d); showDialog(d);
 }
 
-/* Titel, Beschreibung, Link und Bilder einer Notiz ansehen und ändern */
-function editPoint(n, redraw, dislikes){
+/* Titel, Beschreibung, Link und Bilder einer Notiz ansehen und ändern; dazu Aufteilen und Verbinden */
+function editPoint(n, redraw, dislikes, listOf){
   var title = h("input", { class: "field", type: "text", id: "pointTitle", autocomplete: "off", enterkeyhint: "done", value: n.title });
-  var desc = h("textarea", { class: "field", rows: "4", id: "pointDesc", value: n.desc || "" });
+  var desc = h("textarea", { class: "field", rows: "1", id: "pointDesc", placeholder: "Beschreibung (freiwillig)", "aria-label": "Beschreibung", value: n.desc || "" });
   var link = h("input", { class: "field", type: "text", inputmode: "url", id: "pointLink", placeholder: "https://…", autocomplete: "off", autocapitalize: "off", enterkeyhint: "done", value: n.url || "" });
-  var occasion = h("input", { class: "field", type: "text", id: "pointOccasion", placeholder: "z. B. Geburtstag 2026", autocomplete: "off", value: n.givenNote || "" });
+  var occasion = h("input", { class: "field", type: "text", id: "pointOccasion", placeholder: "z. B. Geburtstag 2026", autocomplete: "off", enterkeyhint: "done", value: n.givenNote || "" });
   var givenAt = h("input", { class: "field", type: "date", id: "pointGivenAt", value: n.givenAt || "" });
   var negBox = h("input", { type: "checkbox", id: "pointNeg" });
   negBox.checked = !!n.neg;
-  var giftBox = n.given ? h("div", null,
-    h("label", { for: "pointOccasion", text: "Anlass" }), occasion,
-    h("label", { for: "pointGivenAt", text: "Geschenkt am" }), givenAt) : null;
-  var d = h("dialog", null);
+  var giftBox = n.given ? h("div", { class: "pdgrid" },
+    h("div", null, h("label", { for: "pointOccasion", text: "Anlass" }), occasion),
+    h("div", null, h("label", { for: "pointGivenAt", text: "Geschenkt am" }), givenAt)) : null;
+  var d = h("dialog", { class: "pointdlg" });
   var closed = false;
   function close(){ if (closed) return; closed = true; gcHold--; d.remove(); scheduleGc(); }
+  function autoGrow(){ desc.style.height = "auto"; desc.style.height = Math.min(desc.scrollHeight + 4, 200) + "px"; }
+  desc.addEventListener("input", autoGrow);
 
-  // Bilder: Änderungen gelten erst mit „Speichern“
-  var imgs = (n.imgs || []).slice();
+  // Bilder und Verbinden: Änderungen gelten erst mit „Speichern“
+  var imgs = (n.imgs || []).slice(), mergeAway = [];
   gcHold++;
   var thumbs = h("div", { class: "thumbs" });
   function drawThumbs(){
@@ -1687,22 +1704,141 @@ function editPoint(n, redraw, dislikes){
       });
     });
   });
-  var addBtn = h("button", { class: "btn addimg", type: "button", text: "Bild hinzufügen", onclick: function(){ imgFile.click(); } });
-  var imgBox = h("div", null, h("label", { text: "Bilder" }), thumbs, addBtn, imgFile);
-  drawThumbs();
+  var addBtn = h("button", { class: "btn small", type: "button", text: "+ Bild", onclick: function(){ imgFile.click(); } });
 
-  function save(ev){
-    ev.preventDefault();
+  // Link-Feld erst zeigen, wenn es einen Link gibt oder er gewünscht ist
+  var linkBox = h("div", { hidden: !n.url }, h("label", { for: "pointLink", text: "Link" }), link);
+  var linkBtn = h("button", { class: "btn small", type: "button", text: "+ Link", hidden: !!n.url,
+    onclick: function(){ linkBox.hidden = false; linkBtn.hidden = true; link.focus(); } });
+
+  // andere Notizen derselben Kategorie, mit denen sich diese verbinden lässt
+  function others(){
+    if (!listOf) return [];
+    return listOf().filter(function(x){ return x !== n && !x.given && mergeAway.indexOf(x) === -1; });
+  }
+  var splitBtn = listOf ? h("button", { class: "btn small", type: "button", text: "Aufteilen", onclick: function(){ splitDialog(); } }) : null;
+  var mergeBtn = listOf ? h("button", { class: "btn small", type: "button", text: "Verbinden", onclick: function(){ mergeDialog(); } }) : null;
+  if (mergeBtn && !others().length) mergeBtn.hidden = true;
+  var tools = h("div", { class: "pdtools" }, addBtn, linkBtn, splitBtn, mergeBtn, imgFile);
+
+  function readForm(){
     var t = title.value.trim();
-    if (!t) { toast("Die Notiz braucht einen Titel"); title.focus(); return; }
+    if (!t) { toast("Die Notiz braucht einen Titel"); title.focus(); return null; }
     var u = safeUrl(link.value);
-    if (u === null) { toast("Das ist kein gültiger Link"); link.focus(); return; }
-    n.title = t; n.desc = desc.value.trim(); n.url = u; n.imgs = imgs;
+    if (u === null) { toast("Das ist kein gültiger Link"); linkBox.hidden = false; link.focus(); return null; }
+    return { title: t, desc: desc.value.trim(), url: u };
+  }
+  function applyForm(f){
+    n.title = f.title; n.desc = f.desc; n.url = f.url; n.imgs = imgs;
     if (n.given) { n.givenNote = occasion.value.trim().slice(0, 300); n.givenAt = givenAt.value || ""; }
     if (dislikes) { if (negBox.checked) n.neg = true; else delete n.neg; }
-    saveNow(); close(); redraw();
+    if (listOf && mergeAway.length) {
+      var a = listOf();
+      mergeAway.forEach(function(m){ var i = a.indexOf(m); if (i !== -1) a.splice(i, 1); });
+    }
   }
-  // Enter im Titel- oder Linkfeld beendet die Eingabe (statt ins nächste Feld zu springen)
+  function save(ev){
+    if (ev) ev.preventDefault();
+    var f = readForm();
+    if (!f) return;
+    applyForm(f);
+    saveNow(); close(); redraw();
+    if (mergeAway.length) toast(mergeAway.length === 1 ? "1 Eintrag verbunden" : mergeAway.length + " Einträge verbunden");
+  }
+
+  /* Aufteilen: jede Zeile wird ein eigener Eintrag; die erste Zeile bleibt dieser Eintrag (mit Bildern und Link) */
+  function splitGuess(){
+    var t = title.value.trim(), ds = desc.value.trim();
+    var parts = t.split(/\s*[,;\/]\s*|\s+\+\s+/).filter(Boolean);
+    // „Schokolade, Kekse, Tee: Earl Grey“ → die Beschreibung gehört zum letzten Teil
+    if (parts.length > 1 && ds && ds.indexOf("\n") === -1) { parts[parts.length - 1] += ": " + ds; return parts; }
+    var lines = ds ? ds.split(/\n+/).map(function(x){ return x.trim(); }).filter(Boolean) : [];
+    if (lines.length === 1 && /[,;]/.test(lines[0])) {
+      var bits = lines[0].split(/\s*[,;]\s*/).filter(Boolean);
+      if (bits.every(function(b){ return b.length <= 40; })) lines = bits;
+    }
+    if (parts.length > 1) return parts.concat(lines);
+    if (lines.length > 1) return [t].concat(lines);
+    return [t + (ds ? ": " + ds : "")];
+  }
+  function splitDialog(){
+    var sd = h("dialog", { class: "pointdlg" });
+    var ta = h("textarea", { class: "field", rows: "6", "aria-label": "Einträge, einer pro Zeile", value: splitGuess().join("\n") });
+    var go = h("button", { class: "btn primary", type: "button" });
+    function count(){ return ta.value.split(/\n+/).map(function(x){ return x.trim(); }).filter(Boolean).length; }
+    function label(){ var k = count(); go.textContent = k > 1 ? "In " + k + " Einträge aufteilen" : "Aufteilen"; go.disabled = k < 2; }
+    ta.addEventListener("input", label);
+    function closeSd(){ sd.remove(); }
+    go.addEventListener("click", function(){
+      var rows = ta.value.split(/\n+/).map(function(x){ return x.trim(); }).filter(Boolean);
+      if (rows.length < 2) return;
+      var f = readForm();
+      if (!f) { closeSd(); return; }
+      applyForm(f);
+      var a = listOf(), at = a.indexOf(n), made = [];
+      rows.forEach(function(r, i){
+        var pt = parsePoint(r);
+        if (!pt.title) return;
+        if (i === 0) { n.title = pt.title; n.desc = pt.desc; if (pt.url) n.url = pt.url; return; }
+        var x = { id: uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: [] };
+        if (n.neg) x.neg = true;
+        made.push(x);
+      });
+      if (at === -1) at = a.length - 1;
+      Array.prototype.splice.apply(a, [at + 1, 0].concat(made));
+      saveNow(); closeSd(); close(); redraw();
+      toast("In " + (made.length + 1) + " Einträge aufgeteilt");
+    });
+    sd.appendChild(h("h3", { text: "Aufteilen" }));
+    sd.appendChild(h("p", { class: "small muted", text: "Jede Zeile wird ein eigener Eintrag. „Titel: Beschreibung“ geht auch. Bilder und Link bleiben beim ersten." }));
+    sd.appendChild(ta);
+    sd.appendChild(h("div", { class: "row" }, h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: closeSd }), go));
+    sd.addEventListener("close", closeSd);
+    document.body.appendChild(sd); showDialog(sd);
+    label(); grow(ta);
+  }
+
+  /* Verbinden: andere Einträge derselben Kategorie wandern in diesen (als Zeilen der Beschreibung, mit Bildern) */
+  function mergeDialog(){
+    var list = others();
+    if (!list.length) { toast("Hier gibt es keine weiteren Einträge"); return; }
+    var md = h("dialog", { class: "pointdlg" }), boxes = [];
+    var ul = h("div", { class: "cnlist mergelist" });
+    list.forEach(function(x, i){
+      var cb = h("input", { type: "checkbox", id: "mg" + i });
+      boxes.push(cb);
+      ul.appendChild(h("label", { for: "mg" + i }, cb, h("span", null, h("b", { text: x.title }), x.desc ? h("span", { class: "small muted", text: " – " + x.desc }) : null)));
+    });
+    function closeMd(){ md.remove(); }
+    var go = h("button", { class: "btn primary", type: "button", text: "Verbinden", onclick: function(){
+      var picked = list.filter(function(x, i){ return boxes[i].checked; });
+      if (!picked.length) { toast("Wähle mindestens einen Eintrag aus"); return; }
+      var lines = desc.value.trim() ? [desc.value.trim()] : [];
+      picked.forEach(function(x){
+        var line = x.title + (x.desc ? ": " + x.desc : "");
+        if (x.url) {
+          if (!link.value.trim()) { link.value = x.url; linkBox.hidden = false; linkBtn.hidden = true; }
+          else if (safeUrl(link.value) !== x.url) line += " (" + x.url + ")";
+        }
+        lines.push(line);
+        (x.imgs || []).forEach(function(id){ if (imgs.indexOf(id) === -1) imgs.push(id); });
+        mergeAway.push(x);
+      });
+      desc.value = lines.join("\n");
+      drawThumbs(); autoGrow();
+      if (!others().length) mergeBtn.hidden = true;
+      closeMd();
+      toast("Verbunden – mit „Speichern“ übernehmen");
+    } });
+    md.appendChild(h("h3", { text: "Verbinden mit …" }));
+    md.appendChild(h("p", { class: "small muted", text: "Die gewählten Einträge werden zu Zeilen in der Beschreibung von „" + (title.value.trim() || n.title) + "“. Ihre Bilder kommen mit." }));
+    md.appendChild(ul);
+    md.appendChild(h("div", { class: "row" }, h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: closeMd }), go));
+    md.addEventListener("close", closeMd);
+    document.body.appendChild(md); showDialog(md);
+  }
+
+  // Enter in einem einzeiligen Feld speichert (statt ins nächste Feld zu springen)
   [title, link, occasion].forEach(function(el){
     el.addEventListener("keydown", function(ev){
       if (ev.key === "Enter" && !ev.isComposing) save(ev);
@@ -1710,16 +1846,18 @@ function editPoint(n, redraw, dislikes){
   });
   d.appendChild(h("form", { onsubmit: save },
     h("label", { for: "pointTitle", text: "Titel" }), title,
-    h("label", { for: "pointDesc", text: "Beschreibung" }), desc,
-    h("label", { for: "pointLink", text: "Link (leer lassen für keinen Link)" }), link,
-    dislikes ? h("label", { class: "check", for: "pointNeg" }, negBox, "Mag nicht") : null,
+    desc,
+    linkBox,
+    dislikes ? h("label", { class: "check small", for: "pointNeg" }, negBox, "Mag nicht") : null,
     giftBox,
-    imgBox,
-    h("div", { class: "row" },
+    thumbs,
+    tools,
+    h("div", { class: "row pdfoot" },
       h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }),
       h("button", { class: "btn primary", type: "submit", text: "Speichern" }))));
   d.addEventListener("close", close);
   document.body.appendChild(d); showDialog(d);
+  drawThumbs(); autoGrow();
 }
 
 var toastTimer = null;
@@ -2531,10 +2669,6 @@ function renderCompare(){
   var cats = first.concat(allCats.filter(function(c){ return first.indexOf(c) === -1; }));
   var TOP = first.length, top = { first: first[0].id };
   first.forEach(function(c){ top[c.id] = true; });
-  if (!cats.some(function(c){ return compareOn[c.id]; })) {
-    compareOn = {};
-    compareOn[top.first] = true;
-  }
   var people = state.people.slice().sort(byName);
   var results = h("div");
 
@@ -2560,12 +2694,6 @@ function renderCompare(){
     recent.push(p); width += w;
     return false;
   });
-  // Solange niemand von Hand ausgewählt wurde, sind genau die zuletzt geöffneten ausgewählt
-  if (!comparePeopleSet || !people.some(function(p){ return comparePeople[p.id]; })) {
-    comparePeopleSet = false;
-    comparePeople = {};
-    recent.forEach(function(p){ comparePeople[p.id] = true; });
-  }
   function personQuery(){ return comparePersonQuery.trim().toLowerCase(); }
   function shownPeople(){
     var q = personQuery();
@@ -2608,7 +2736,7 @@ function renderCompare(){
     var chosenCats = cats.filter(function(c){ return compareOn[c.id]; });
     var chosenPeople = people.filter(function(p){ return comparePeople[p.id]; });
     if (!chosenCats.length || !chosenPeople.length) {
-      results.appendChild(h("p", { class: "empty", text: !chosenCats.length ? "Wähle oben mindestens eine Kategorie aus." : "Wähle oben mindestens eine Person aus." }));
+      results.appendChild(h("p", { class: "empty", text: !chosenCats.length ? "Tippe oben auf die Kategorien, die du vergleichen möchtest." : "Tippe oben auf die Personen, die du vergleichen möchtest." }));
       return;
     }
     // Spalten: je Kategorie ein Block mit den Personen nebeneinander. Zeilen: je Person ein Block mit den Kategorien nebeneinander.
