@@ -114,6 +114,7 @@ body.sorting{-webkit-user-select:none;user-select:none}
   width:56px;height:56px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;
   background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px rgba(20,10,30,.3)}
 .fab svg{width:26px;height:26px}
+.fab.fab2{bottom:calc(144px + env(safe-area-inset-bottom,0px))}
 .vcard{margin-top:10px}
 .extrarow{display:flex;gap:6px;margin-bottom:12px}
 .extrarow .field{min-width:0;margin-bottom:0}
@@ -254,6 +255,19 @@ dialog.pointdlg .thumbx{width:26px;height:26px;top:-6px;right:-6px;font-size:.8r
 .btn.small{min-height:36px;padding:4px 10px;font-size:.85rem;border-radius:10px}
 .pdfoot{position:sticky;bottom:0;margin:0 -16px;padding:10px 16px 14px;background:var(--surface);border-top:1.5px solid var(--line)}
 .mergelist{max-height:46vh;overflow:auto;margin-bottom:12px}
+dialog.quickdlg{width:min(94vw,480px)}
+.qlist{display:grid;gap:8px;margin-bottom:10px}
+.qrow{border:1.5px solid var(--line);border-radius:12px;padding:8px}
+.qrow.unsure{border-color:#C0263B}
+.qrow.guess{border-style:dashed}
+.qtop{display:flex;gap:6px;align-items:flex-start}
+.qtop .field{flex:1;min-width:0;font-weight:600}
+.qtop .btn{flex:none;width:44px;min-height:44px;padding:0}
+.qsel{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+dialog.pointdlg .qsel .field{margin-bottom:6px;padding:6px 8px;min-width:0}
+dialog.pointdlg .qrow .check{margin:0 0 2px}
+dialog.pointdlg .qtop .field{margin-bottom:6px}
+.qhint{display:block;font-size:.8rem;color:var(--muted)}
 .mergelist label span{overflow-wrap:anywhere}
 .viewer img{display:block;max-width:100%;max-height:70vh;margin:0 auto 12px;border-radius:10px}
 .readdesc{display:block;font-size:.9rem;color:var(--muted);white-space:pre-wrap}
@@ -322,7 +336,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "16.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "18.10.2026 (3)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -2234,23 +2248,39 @@ function render(){
 }
 
 /* ---------- Personen ---------- */
+var PERSON_PLUS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9.5" cy="8" r="4"/><path d="M2.5 20.5c.6-3.6 3.4-6 7-6s6.4 2.4 7 6"/><path d="M19 8v6M16 11h6"/></svg>';
+/* Neue Person: Name abfragen, dann gleich die Person zum Ausfüllen öffnen */
+function newPersonDialog(){
+  var input = h("input", { class: "field", type: "text", id: "newPersonName", placeholder: "Name", autocomplete: "off", enterkeyhint: "done" });
+  var d = h("dialog", { class: "pointdlg" });
+  function close(){ d.remove(); }
+  d.appendChild(h("form", { onsubmit: function(ev){
+      ev.preventDefault();
+      var name = input.value.trim();
+      if (!name) { input.focus(); return; }
+      var p = { id: uid(), name: name, photo: "", card: cleanCard(null), updated: Date.now(), entries: {} };
+      state.people.push(p); saveNow(); close();
+      go("person", p.id);
+      editMode = true; render();   // neue Person: gleich alle Kategorien zum Ausfüllen
+    } },
+    h("h3", { text: "Neue Person" }),
+    h("label", { for: "newPersonName", text: "Name" }), input,
+    h("div", { class: "row pdfoot" },
+      h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }),
+      h("button", { class: "btn primary", type: "submit", text: "Anlegen" }))));
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+  setTimeout(function(){ input.focus(); }, 50);
+}
+
 function renderPeople(){
   app.appendChild(h("h1", { text: "Merkbuch" }));
 
-  var nameInput = h("input", { class: "field", type: "text", placeholder: "Name der neuen Person", "aria-label": "Name der neuen Person", autocomplete: "off",
-    onkeydown: function(ev){ if (ev.key === "Enter") addPerson(); } });
-  function addPerson(){
-    var name = nameInput.value.trim();
-    if (!name) { nameInput.focus(); return; }
-    var p = { id: uid(), name: name, photo: "", card: cleanCard(null), updated: Date.now(), entries: {} };
-    state.people.push(p); saveNow();
-    go("person", p.id);
-    editMode = true; render();   // neue Person: gleich alle Kategorien zum Ausfüllen
-  }
-  app.appendChild(h("div", { class: "row" }, nameInput, h("button", { class: "btn primary", text: "Anlegen", onclick: addPerson })));
+  // Rechts unten: neue Person (oben) und Schnell eintragen (unten)
+  app.appendChild(h("button", { class: "fab fab2", type: "button", icon: PERSON_PLUS_ICON, "aria-label": "Neue Person anlegen", title: "Neue Person", onclick: newPersonDialog }));
 
   if (state.people.length === 0) {
-    app.appendChild(h("div", { class: "empty", text: "Noch keine Personen. Gib oben einen Namen ein und tippe auf „Anlegen“." }));
+    app.appendChild(h("div", { class: "empty", text: "Noch keine Personen. Tippe unten rechts auf das Personen-Symbol, um jemanden anzulegen." }));
     app.appendChild(loadButton());
     return;
   }
@@ -2271,10 +2301,11 @@ function renderPeople(){
     remind.style.marginTop = "12px";
     app.appendChild(remind);
   }
+  app.appendChild(h("button", { class: "fab", type: "button", icon: QUICK_ICON, "aria-label": "Schnell eintragen", title: "Schnell eintragen", onclick: quickEntry }));
   var list = h("ul", { class: "people" });
-  var search = h("input", { class: "field", type: "search", placeholder: "Suchen, z. B. Erdbeer oder Nuss", "aria-label": "In allen Personen suchen", value: query,
+  var search = h("input", { class: "field", type: "search", placeholder: "Suchen, z. B. Lukas, Erdbeer oder Nuss", "aria-label": "In allen Personen suchen", value: query,
     oninput: function(){ query = search.value; fillList(); } });
-  search.style.marginTop = "12px";
+  if (app.lastChild && app.lastChild.classList && app.lastChild.classList.contains("banner")) search.style.marginTop = "12px";
   app.appendChild(search);
   app.appendChild(list);
   app.appendChild(loadButton());
@@ -2319,6 +2350,270 @@ function renderPeople(){
     if (shown === 0) list.appendChild(h("li", { class: "empty", text: "Kein Treffer für „" + query.trim() + "“." }));
   }
   fillList();
+}
+
+/* ---------- Schnell eintragen ----------
+   Freier Text wie „Lukas Pommes, Lennart keine Zwiebeln“ wird auf Personen und Kategorien verteilt.
+   Vor dem Speichern zeigt eine Liste die Zuordnung; dort lässt sich alles ändern. */
+var QUICK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.3 7.6L3.5 21l1.4-4.9A8.5 8.5 0 1 1 21 12z"/><path d="M12.2 8.2v7.6M8.4 12h7.6"/></svg>';
+var quickDraft = "";
+var QUICK_PRIO = { essen: 1, tee: 1, cocktails: 1, suess: 1, kuchen: 1, eis: 1, soft: 1, wein: 1, farbe: 1, blumen: 2, pizza: 2, restaurant: 2, vorlieben: 3, geschenk: 4 };
+var QUICK_CAT_ALIAS = { geschenk: "geschenk", geschenke: "geschenk", geschenkidee: "geschenk", geschenkideen: "geschenk", wunsch: "geschenk", wunschliste: "geschenk",
+  farbe: "farbe", lieblingsfarbe: "farbe", allergie: "allergien", allergien: "allergien", allergisch: "allergien", essen: "essen", lieblingsessen: "essen",
+  getraenk: "cocktails", getraenke: "cocktails", trinken: "cocktails", blumen: "blumen", blume: "blumen", kuchen: "kuchen", torte: "kuchen", pizza: "pizza",
+  tee: "tee", kaffee: "tee", suessigkeiten: "suess", hobby: "vorlieben", hobbys: "vorlieben", vorlieben: "vorlieben" };
+
+function quickCap(t){ t = String(t || "").trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+
+/* Namen, an denen Personen im Text erkannt werden: ganzer Name, Vor- und Nachname, auch mit Genitiv-s */
+function quickNameKeys(){
+  var keys = [], count = {};
+  function add(words, p, full){
+    var k = words.join(" ");
+    if (!k || k.length < 2) return;
+    keys.push({ k: k, n: words.length, p: p, full: full });
+    if (!full) count[k] = (count[k] || 0) + 1;
+  }
+  state.people.forEach(function(p){
+    var w = normLabel(p.name).split(" ").filter(Boolean);
+    if (!w.length) return;
+    add(w, p, true);
+    if (w.length > 1) { add([w[0]], p, false); add([w[w.length - 1]], p, false); }
+  });
+  keys.forEach(function(x){ x.ambiguous = !x.full && count[x.k] > 1; });
+  return keys;
+}
+function lastUsedAt(p){ return Math.max(p.seen || 0, p.updated || 0); }
+
+function quickParse(text){
+  var keys = quickNameKeys();
+  // Wörter mit Position; Zeilenumbrüche zählen wie Kommas
+  var src = String(text || "").replace(/\r/g, "").replace(/\n+/g, ", ");
+  var toks = [], re = /[A-Za-zÄÖÜäöüß0-9][A-Za-zÄÖÜäöüß0-9'’-]*/g, m;
+  while ((m = re.exec(src))) toks.push({ s: m.index, e: m.index + m[0].length, w: normLabel(m[0].replace(/['’]s?$/, "")), raw: m[0] });
+  var mentions = [];
+  for (var i = 0; i < toks.length; i++) {
+    var best = null;
+    for (var len = 3; len >= 1 && !best; len--) {
+      if (i + len > toks.length) continue;
+      var words = toks.slice(i, i + len).map(function(t){ return t.w; }).join(" ");
+      var hits = keys.filter(function(x){ return x.n === len && (x.k === words || (len === 1 && words === x.k + "s" && !/s$/.test(x.k))); });
+      if (!hits.length) continue;
+      var full = hits.filter(function(x){ return x.full; });
+      var pool = (full.length ? full : hits).map(function(x){ return x.p; })
+        .filter(function(p, at, a){ return a.indexOf(p) === at; })
+        .sort(function(a, b){ return lastUsedAt(b) - lastUsedAt(a); });
+      best = { s: toks[i].s, e: toks[i + len - 1].e, people: [pool[0]], unsure: pool.length > 1 };
+      i += len - 1;
+    }
+    if (best) mentions.push(best);
+  }
+  // Abschnitte: Text vor dem ersten Namen, dann je Name bis zum nächsten
+  var groups = [], pre = src.slice(0, mentions.length ? mentions[0].s : src.length);
+  mentions.forEach(function(mn, k){
+    var next = mentions[k + 1], body = src.slice(mn.e, next ? next.s : src.length);
+    var last = groups[groups.length - 1];
+    // „Lukas und Lennart mögen …“: nur Bindewörter dazwischen → beide bekommen denselben Text
+    if (last && last.pendingShare) { last.people = last.people.concat(mn.people); last.unsure = last.unsure || mn.unsure; last.body = body; last.pendingShare = !!next && /^[\s,]*(?:und|sowie|&|\+)[\s,]*$/i.test(body); return; }
+    var g = { people: mn.people.slice(), unsure: mn.unsure, body: body };
+    g.pendingShare = !!next && /^[\s,]*(?:und|sowie|&|\+)[\s,]*$/i.test(body);
+    groups.push(g);
+  });
+  var items = [];
+  function pushItems(raw, g){
+    raw.split(/\s*[,;]\s*/).forEach(function(part){
+      var t = part.replace(/^[\s:–—-]*(?:und|sowie)\s+/i, "").replace(/\s+(?:und|sowie)\s*$/i, "").replace(/^\s*:\s*/, "").trim();
+      if (!t || /^(?:und|sowie|mag|mögen|hat|ist)$/i.test(t)) return;
+      items.push({ raw: t, group: g });
+    });
+  }
+  if (pre.trim()) pushItems(pre, null);
+  groups.forEach(function(g){ pushItems(g.body, g); });
+  // „Buch für Lennart“: ein Eintrag, der auf „für“ endet, gehört zur nächsten Person
+  items.forEach(function(it, k){
+    if (!/\s+(?:für|fuer)$/i.test(it.raw)) return;
+    it.raw = it.raw.replace(/\s+(?:für|fuer)$/i, "");
+    it.gift = true;
+    var at = it.group ? groups.indexOf(it.group) + 1 : 0;
+    if (groups[at]) it.group = groups[at];
+  });
+  return items.map(function(it){
+    var r = quickClassify(it.raw, it.gift);
+    var g = it.group;
+    return { title: r.title, catId: r.cat ? r.cat.id : "", neg: r.neg, sure: r.sure && !!g && !g.unsure,
+      people: g ? g.people.map(function(p){ return p.id; }) : [], newName: "" };
+  }).filter(function(x){ return x.title; });
+}
+
+/* Wohin ein einzelner Eintrag gehört: Kategorie, „mag nicht“ und bereinigter Titel */
+function quickClassify(raw, giftHint){
+  var t = raw.trim(), neg = false, hint = giftHint ? "geschenk" : "", cat = null, sure = true;
+  var cats = state.categories;
+  function byKind(k){ return cats.filter(function(c){ return c.kind === k; })[0] || null; }
+  // Verben vorne weg, merken was sie andeuten
+  var verb = t.match(/^(?:wünscht sich|wünschen sich|hätte gern|hätte gerne|hätten gern|möchte|will|braucht)\b\s*/i);
+  if (verb) { hint = "geschenk"; t = t.slice(verb[0].length); }
+  verb = t.match(/^(trinkt|trinken)\b\s*(?:gern|gerne|am liebsten)?\s*/i);
+  if (verb) { hint = hint || "trinken"; t = t.slice(verb[0].length); }
+  verb = t.match(/^(isst|essen)\b\s*(?:gern|gerne|am liebsten)?\s*/i);
+  if (verb && t.length > verb[0].length) { hint = hint || "essen"; t = t.slice(verb[0].length); }
+  t = t.replace(/^(?:mag|mögen|liebt|lieben|steht auf|stehen auf|findet|hat gern|hat gerne)\b\s*(?:gern|gerne|sehr|total|am liebsten)?\s*/i, "");
+  // Allergie
+  var allergy = t.match(/^(?:ist\s+|sind\s+)?allergisch\s+(?:gegen|auf)\s+(.+)$/i) || t.match(/^allergie\s*(?:gegen|auf|:)?\s*(.+)$/i)
+    || t.match(/^(?:verträgt|vertragen)\s+(?:keine?n?|kein)\s+(.+)$/i) || t.match(/^(.+?)[-\s]?allergie$/i);
+  if (allergy && byKind("allergien")) return { title: quickCap(allergy[1]), cat: byKind("allergien"), neg: false, sure: true };
+  // Verneinung
+  var negM = t.match(/^(?:-\s*|mag\s+|isst\s+|trinkt\s+)?(?:keine?n?|keinerlei|nicht|kein|hasst|hassen|ohne|nie)\b\s*/i);
+  if (negM && t.length > negM[0].length) { neg = true; t = t.slice(negM[0].length); }
+  else if (/^\s*[-–—]\s*\S/.test(t)) { neg = true; t = t.replace(/^\s*[-–—]\s*/, ""); }
+  if (/\s+(?:nicht|gar nicht|überhaupt nicht)$/i.test(t)) { neg = true; t = t.replace(/\s+(?:gar |überhaupt )?nicht$/i, ""); }
+  // Kategorie ausdrücklich genannt: „Lieblingsfarbe blau“, „Geschenk: Buch“
+  var head = t.match(/^([A-Za-zÄÖÜäöüß& ]+?)\s*(?::|\s)\s*(.+)$/);
+  if (head) {
+    var hk = normLabel(head[1]);
+    var named = cats.filter(function(c){ return normLabel(c.name) === hk; })[0] || (QUICK_CAT_ALIAS[hk] && byKind(QUICK_CAT_ALIAS[hk]));
+    if (named) { cat = named; t = head[2]; }
+  }
+  t = quickCap(t.replace(/^[:\s]+/, "").replace(/^(?:ein|eine|einen|einem|einer|den|die|das|dem|der)\s+(?=\S)/i, ""));
+  if (!t) return { title: "" };
+  var key = normLabel(parsePoint(t).title);
+  if (!cat && hint === "geschenk") cat = byKind("geschenk");
+  if (!cat && !neg) {
+    // passt genau zu einer Auswahl (z. B. Vegetarisch, Kaffee, Schokolade)?
+    cat = cats.filter(function(c){ return !c.hidden && c.subs.some(function(s){ return normLabel(s.name) === key; }); })[0] || null;
+  }
+  if (!cat && GUESS_EXACT[key]) cat = byKind(GUESS_EXACT[key]);
+  if (!cat) {
+    var pad = " " + key + " ";
+    if (GUESS_FOOD.some(function(w){ return key === w || pad.indexOf(" " + w + " ") !== -1; })) cat = byKind("essen");
+  }
+  if (!cat) {
+    // frühere Einträge und Wortlisten: das genaueste Fach gewinnt
+    var cand = cats.filter(function(c){ return !c.hidden && c.kind !== "allergien" && c.kind !== "jga"; }).filter(function(c){
+      if (hint === "trinken" && c.kind !== "cocktails" && c.kind !== "tee" && c.kind !== "soft" && c.kind !== "wein") return false;
+      if (hint === "essen" && !FOOD_KINDS[c.kind]) return false;
+      return suggestionsFor(c, null).some(function(w){ return normLabel(w) === key; });
+    });
+    cand.sort(function(a, b){ return (QUICK_PRIO[a.kind] || 2) - (QUICK_PRIO[b.kind] || 2) || cats.indexOf(a) - cats.indexOf(b); });
+    cat = cand[0] || null;
+  }
+  if (!cat && hint === "trinken") cat = byKind("cocktails");
+  if (!cat) { cat = byKind(hint === "essen" ? "essen" : foodGuess(key)); sure = false; }
+  if (neg && cat && !cat.dislikes) { cat = FOOD_KINDS[cat.kind] ? byKind("essen") : byKind("vorlieben"); }
+  if (!cat) { cat = byKind("vorlieben") || cats.filter(function(c){ return !c.hidden; })[0] || null; sure = false; }
+  return { title: t, cat: cat, neg: neg, sure: sure };
+}
+
+function quickEntry(){
+  var d = h("dialog", { class: "pointdlg quickdlg" });
+  var closed = false;
+  function close(){ if (closed) return; closed = true; d.remove(); }
+  d.addEventListener("close", close);
+  document.body.appendChild(d); showDialog(d);
+  stepText();
+
+  function stepText(){
+    d.textContent = "";
+    var ta = h("textarea", { class: "field", rows: "4", "aria-label": "Neue Informationen", placeholder: "z. B. Lukas Pommes, Lennart keine Zwiebeln", value: quickDraft });
+    ta.addEventListener("input", function(){ quickDraft = ta.value; grow(ta); });
+    function next(){
+      quickDraft = ta.value;
+      if (!ta.value.trim()) { ta.focus(); return; }
+      var items = quickParse(ta.value);
+      if (!items.length) { toast("Darin habe ich keinen Eintrag gefunden"); return; }
+      stepReview(items);
+    }
+    d.appendChild(h("h3", { text: "Schnell eintragen" }));
+    d.appendChild(h("p", { class: "small muted", text: "Einfach drauflos schreiben: Name, dann was gilt. Mehreres mit Komma trennen. „keine …“ kommt zu „Mag nicht“, „allergisch gegen …“ zu den Allergien." }));
+    d.appendChild(ta);
+    d.appendChild(h("div", { class: "row pdfoot" },
+      h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }),
+      h("button", { class: "btn primary", type: "button", text: "Zuordnen", onclick: next })));
+    grow(ta);
+    setTimeout(function(){ ta.focus(); }, 50);
+  }
+
+  function stepReview(items){
+    d.textContent = "";
+    // eine Zeile je Person und Eintrag
+    var rows = [];
+    items.forEach(function(it){
+      if (it.people.length) it.people.forEach(function(pid){ rows.push({ title: it.title, person: pid, catId: it.catId, neg: it.neg, sure: it.sure }); });
+      else rows.push({ title: it.title, person: "", catId: it.catId, neg: it.neg, sure: false });
+    });
+    var people = state.people.slice().sort(byName);
+    var cats = visibleCats().concat(state.categories.filter(function(c){ return c.hidden; }));
+    var list = h("div", { class: "qlist" });
+    var saveBtn = h("button", { class: "btn primary", type: "button", onclick: apply });
+    function count(){
+      var k = rows.filter(function(r){ return !r.gone; }).length;
+      saveBtn.textContent = k === 1 ? "1 Eintrag speichern" : k + " Einträge speichern";
+      saveBtn.disabled = k === 0;
+    }
+    rows.forEach(function(r){
+      var title = h("input", { class: "field", type: "text", value: r.title, "aria-label": "Eintrag", autocomplete: "off" });
+      title.addEventListener("input", function(){ r.title = title.value; });
+      var ps = h("select", { class: "field", "aria-label": "Person" });
+      ps.appendChild(h("option", { value: "", text: "Person wählen …" }));
+      people.forEach(function(p){ var o = h("option", { value: p.id, text: displayName(p) }); if (p.id === r.person) o.selected = true; ps.appendChild(o); });
+      var cs = h("select", { class: "field", "aria-label": "Kategorie" });
+      cats.forEach(function(c){ var o = h("option", { value: c.id, text: catName(c) + (c.hidden ? " (ausgeblendet)" : "") }); if (c.id === r.catId) o.selected = true; cs.appendChild(o); });
+      var nb = h("input", { type: "checkbox" }); nb.checked = !!r.neg;
+      var negLab = h("label", { class: "check small" }, nb, "Mag nicht");
+      function catNow(){ return state.categories.filter(function(c){ return c.id === r.catId; })[0]; }
+      function upd(){
+        var c = catNow();
+        negLab.hidden = !(c && c.dislikes);
+        row.classList.toggle("unsure", !r.person);
+      }
+      ps.addEventListener("change", function(){ r.person = ps.value; upd(); });
+      cs.addEventListener("change", function(){ r.catId = cs.value; upd(); });
+      nb.addEventListener("change", function(){ r.neg = nb.checked; });
+      var row = h("div", { class: "qrow" + (r.sure ? "" : " guess") },
+        h("div", { class: "qtop" }, title,
+          h("button", { class: "btn icon danger", type: "button", text: "✕", "aria-label": "Eintrag weglassen", onclick: function(){ r.gone = true; row.remove(); count(); } })),
+        h("div", { class: "qsel" }, ps, cs),
+        negLab,
+        r.sure ? null : h("span", { class: "qhint", text: "geraten – bitte prüfen" }));
+      upd();
+      list.appendChild(row);
+    });
+    function apply(){
+      var todo = rows.filter(function(r){ return !r.gone && r.title.trim(); });
+      if (todo.some(function(r){ return !r.person; })) { toast("Bitte bei jedem Eintrag eine Person wählen"); return; }
+      var touched = {};
+      todo.forEach(function(r){
+        var p = state.people.filter(function(x){ return x.id === r.person; })[0];
+        var c = state.categories.filter(function(x){ return x.id === r.catId; })[0];
+        if (!p || !c) return;
+        var pt = parsePoint(r.title);
+        if (!pt.title) return;
+        var e = editableEntry(p, c.id), neg = !!r.neg && !!c.dislikes;
+        c.hidden = false;
+        var sub = !neg && !pt.desc && c.subs.filter(function(s){ return normLabel(s.name) === normLabel(pt.title); })[0];
+        if (sub) { if (e.subs.indexOf(sub.id) === -1) e.subs.push(sub.id); }
+        else if (!e.notes.some(function(x){ return normLabel(x.title) === normLabel(pt.title) && !!x.neg === neg && !x.given; })) {
+          var n = { id: uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: [] };
+          if (neg) n.neg = true;
+          e.notes.push(n);
+        }
+        p.updated = Date.now();
+        touched[p.id] = 1;
+      });
+      saveNow();
+      quickDraft = "";
+      close(); render();
+      var k = Object.keys(touched).length;
+      toast(todo.length + (todo.length === 1 ? " Eintrag" : " Einträge") + " bei " + k + (k === 1 ? " Person" : " Personen") + " gespeichert");
+    }
+    d.appendChild(h("h3", { text: "Stimmt die Zuordnung?" }));
+    d.appendChild(h("p", { class: "small muted", text: "Prüfe Person und Kategorie und ändere, was nicht passt. Gespeichert wird erst unten." }));
+    d.appendChild(list);
+    d.appendChild(h("div", { class: "row pdfoot" },
+      h("button", { class: "btn", type: "button", text: "Zurück", onclick: stepText }),
+      saveBtn));
+    count();
+  }
 }
 
 /* ---------- Eine Person ---------- */
