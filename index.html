@@ -132,8 +132,6 @@ body.sorting{-webkit-user-select:none;user-select:none}
 .cnlist li:first-child{border-top:0}
 .cnlist label{display:flex;gap:10px;align-items:center;margin:0;padding:10px 12px;font-weight:400;cursor:pointer}
 .cnlist input{flex:none;width:22px;height:22px;accent-color:var(--accent)}
-.cnlist .cnname{font-weight:600;display:block;overflow-wrap:anywhere}
-.cnlist .cnmeta{display:block;font-size:.85rem;color:var(--muted)}
 .recopt{border-top:1.5px solid var(--line);padding:12px 0}
 .recopt strong{display:block;margin-bottom:2px}
 .recopt .state{display:block;margin-bottom:8px;font-size:.9rem;color:var(--muted)}
@@ -336,7 +334,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "20.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "21.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -2325,8 +2323,7 @@ function renderPeople(){
   app.appendChild(loadButton());
   function loadButton(){
     var r = h("div", { class: "row" },
-      h("button", { class: "btn", text: "Person aus Datei laden", onclick: pickImportFile }),
-      h("button", { class: "btn", text: "Aus ColorNote", onclick: colorNoteImport }));
+      h("button", { class: "btn", text: "Person aus Datei laden", onclick: pickImportFile }));
     r.style.marginTop = "12px";
     r.style.flexWrap = "wrap";
     return r;
@@ -3557,7 +3554,6 @@ function renderSettings(){
   if (canShareFiles()) {
     app.appendChild(h("button", { class: "btn", text: "Backup teilen, z. B. an Google Drive", onclick: shareBackup })).style.marginTop = "8px";
   }
-  app.appendChild(h("button", { class: "btn", text: "Aus ColorNote übernehmen", onclick: colorNoteImport })).style.marginTop = "8px";
   var lastBackup = readDate(BACKUP_KEY);
   app.appendChild(h("p", { class: "muted small", text: lastBackup
     ? "Letztes Backup: " + new Date(lastBackup).toLocaleDateString("de-DE") + "."
@@ -3747,313 +3743,6 @@ function importPerson(raw){
   saveNow();
   go("person", person.id);
   toast("„" + person.name + "“ hinzugefügt" + (newCats ? ", " + newCats + (newCats === 1 ? " neue Kategorie" : " neue Kategorien") : ""));
-}
-
-/* ---------- Übernahme aus ColorNote ----------
-   ColorNote-Backups sind verschlüsselt (AES-128-CBC; Schlüssel und Startwert werden per MD5 aus Passwort und
-   einem festen Salz gebildet, davor stehen 28 Bytes Kopf). Darin liegt jede Notiz als JSON-Objekt.
-   Eine Notiz entspricht einer Person: Der Titel ist der Name, Zeilen wie „Kuchen: Käsekuchen“ oder eine Zeile
-   „Geschenkideen:“ mit Einträgen darunter werden den passenden Kategorien zugeordnet. */
-function md5(bytes){
-  function add(x, y){ return (x + y) | 0; }
-  function rol(x, c){ return (x << c) | (x >>> (32 - c)); }
-  var K = [], S = [7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
-    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21];
-  for (var i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) | 0;
-  var n = bytes.length, total = ((n + 8) >>> 6) + 1, words = new Int32Array(total * 16);
-  for (i = 0; i < n; i++) words[i >> 2] |= bytes[i] << ((i % 4) * 8);
-  words[n >> 2] |= 0x80 << ((n % 4) * 8);
-  words[total * 16 - 2] = (n * 8) | 0;
-  words[total * 16 - 1] = Math.floor(n / 536870912);
-  var a0 = 0x67452301, b0 = 0xefcdab89 | 0, c0 = 0x98badcfe | 0, d0 = 0x10325476;
-  for (var blk = 0; blk < total * 16; blk += 16) {
-    var a = a0, b = b0, c = c0, d = d0;
-    for (i = 0; i < 64; i++) {
-      var f, g;
-      if (i < 16) { f = (b & c) | (~b & d); g = i; }
-      else if (i < 32) { f = (d & b) | (~d & c); g = (5 * i + 1) % 16; }
-      else if (i < 48) { f = b ^ c ^ d; g = (3 * i + 5) % 16; }
-      else { f = c ^ (b | ~d); g = (7 * i) % 16; }
-      var tmp = d; d = c; c = b;
-      b = add(b, rol(add(add(a, f), add(K[i], words[blk + g])), S[i]));
-      a = tmp;
-    }
-    a0 = add(a0, a); b0 = add(b0, b); c0 = add(c0, c); d0 = add(d0, d);
-  }
-  var out = new Uint8Array(16);
-  [a0, b0, c0, d0].forEach(function(v, j){ for (var k = 0; k < 4; k++) out[j * 4 + k] = (v >>> (k * 8)) & 255; });
-  return out;
-}
-function joinBytes(){
-  var len = 0, i;
-  for (i = 0; i < arguments.length; i++) len += arguments[i].length;
-  var out = new Uint8Array(len), at = 0;
-  for (i = 0; i < arguments.length; i++) { out.set(arguments[i], at); at += arguments[i].length; }
-  return out;
-}
-function colorNoteDecrypt(bytes, password){
-  if (!(window.crypto && window.crypto.subtle)) return Promise.reject(new Error("crypto"));
-  if (bytes.length < 44) return Promise.reject(new Error("short"));
-  var pw = new TextEncoder().encode(password), salt = new TextEncoder().encode("ColorNote Fixed Salt");
-  var key = md5(joinBytes(pw, salt)), iv = md5(joinBytes(key, pw, salt));
-  return window.crypto.subtle.importKey("raw", key, { name: "AES-CBC" }, false, ["decrypt"]).then(function(k){
-    return window.crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, k, bytes.slice(28));
-  }).then(function(buf){ return new TextDecoder("utf-8").decode(buf); });
-}
-/* Sucht im entschlüsselten Text alle JSON-Objekte (je eins pro Notiz) */
-function jsonObjects(text){
-  var out = [], i = 0;
-  while (i < text.length) {
-    var start = text.indexOf("{", i);
-    if (start === -1) break;
-    var depth = 0, inStr = false, esc = false, end = -1;
-    for (var j = start; j < text.length; j++) {
-      var ch = text[j];
-      if (esc) { esc = false; continue; }
-      if (ch === "\\") { esc = true; continue; }
-      if (ch === '"') { inStr = !inStr; continue; }
-      if (inStr) continue;
-      if (ch === "{") depth++;
-      else if (ch === "}" && --depth === 0) { end = j; break; }
-    }
-    if (end === -1) { i = start + 1; continue; }
-    try { out.push(JSON.parse(text.slice(start, end + 1))); i = end + 1; }
-    catch (e) { i = start + 1; }
-  }
-  return out;
-}
-
-function normLabel(v){
-  return String(v || "").toLowerCase().replace(/ß/g, "ss").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue")
-    .replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
-}
-/* Übliche Überschriften in den Notizen, zugeordnet zu Kategorien bzw. Feldern der Visitenkarte */
-var CN_KIND_LABELS = {
-  geschenk: ["geschenkideen", "geschenke", "geschenkidee", "wuensche", "wunschliste", "wunsch"],
-  vorlieben: ["vorlieben", "interessen", "hobbys", "hobbies", "hobby", "freizeit"],
-  allergien: ["allergien", "allergie", "unvertraeglichkeiten", "unvertraeglichkeit"],
-  essen: ["essen", "lieblingsessen", "lieblingsgericht", "ernaehrung"],
-  suess: ["suessigkeiten", "suesses", "naschen"],
-  kuchen: ["kuchen", "torten"],
-  pizza: ["pizza"],
-  cocktails: ["getraenke", "cocktails", "cocktail", "drinks"],
-  tee: ["tee kaffee", "kaffee tee", "tee"],
-  blumen: ["blumen", "blume"],
-  farbe: ["lieblingsfarbe", "farbe", "farben", "lieblingsfarben"],
-  jga: ["junggesellinnenabschied", "jga", "junggesellenabschied"],
-  soft: ["softdrinks"], wein: ["wein bier"], eis: ["eis", "eissorten"], restaurant: ["restaurants"],
-  groesse: ["groessen"], duft: ["duefte", "duft", "parfum"],
-  medien: ["buecher filme musik"], reise: ["reiseziele", "reisen", "urlaub"]
-};
-var CN_CARD_LABELS = {
-  partner: ["partnerin", "partner", "freund", "freundin", "ehemann", "ehefrau", "mann", "frau"],
-  birthday: ["geburtstag", "geburtsdatum", "geb"],
-  kids: ["kinder", "kind"],
-  phone: ["telefon", "tel", "handy", "telefonnummer", "handynummer", "mobil"],
-  email: ["email", "e mail", "mail"],
-  address: ["adresse", "anschrift"]
-};
-function cnResolve(label){
-  var n = normLabel(label), hit = null;
-  if (!n) return null;
-  Object.keys(CN_CARD_LABELS).some(function(f){ if (CN_CARD_LABELS[f].indexOf(n) !== -1) { hit = { type: "card", field: f }; return true; } });
-  if (hit) return hit;
-  // „Mag“ und „Mag nicht“: in die Vorlieben, zum späteren Einsortieren markiert
-  var likeLabels = ["mag", "mag gerne", "mag gern"], dislikeLabels = ["mag nicht", "mag nicht gern", "mag keine", "mag kein", "abneigungen", "no go", "no gos"];
-  if (likeLabels.indexOf(n) !== -1 || dislikeLabels.indexOf(n) !== -1) {
-    var vor = state.categories.filter(function(c){ return c.kind === "vorlieben"; })[0];
-    if (vor) return { type: "cat", cat: vor, review: true, neg: dislikeLabels.indexOf(n) !== -1 };
-  }
-  state.categories.some(function(c){ if (normLabel(c.name) === n) { hit = { type: "cat", cat: c }; return true; } });
-  if (hit) return hit;
-  Object.keys(CN_KIND_LABELS).some(function(k){
-    if (CN_KIND_LABELS[k].indexOf(n) === -1) return false;
-    var c = state.categories.filter(function(x){ return x.kind === k; })[0];
-    if (c) hit = { type: "cat", cat: c };
-    return !!c;
-  });
-  if (hit) return hit;
-  state.categories.some(function(c){
-    return c.subs.some(function(sub){ if (normLabel(sub.name) === n) { hit = { type: "sub", cat: c, sub: sub }; return true; } });
-  });
-  return hit;
-}
-/* Zerlegt den Text einer Notiz in Ziele (Kategorie, Unterkategorie, Visitenkarte) mit ihren Einträgen */
-function cnParse(note){
-  var title = String(note.title || "").trim();
-  var lines = String(note.note || "").split(/\r?\n/);
-  if (lines.length && lines[0].trim() === title) lines.shift();   // ColorNote wiederholt den Titel als erste Zeile
-  var groups = [], current = null;
-  function group(target){ current = { target: target, values: [] }; groups.push(current); return current; }
-  lines.forEach(function(raw){
-    var line = raw.replace(/^\s*(\[[ vVxX✓✔]?\]|[-–•*·▪►>]+)\s*/, "").trim();
-    if (!line || /^[-–_=.*\s]+$/.test(line)) return;
-    var m = line.match(/^([^:]{1,40}):\s*(.*)$/);
-    if (m) {
-      var target = cnResolve(m[1]);
-      if (target) {
-        var g = group(target), rest = m[2].trim();
-        if (rest) (rest.indexOf(":") === -1 ? rest.split(/\s*[;,]\s*/) : [rest]).forEach(function(v){ if (v) g.values.push(v); });
-        return;
-      }
-      if (!m[2].trim() && /^[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß &\/-]{0,28}$/.test(m[1].trim())) {   // unbekannte Überschrift ohne Inhalt: neue Kategorie
-        group({ type: "newcat", name: m[1].trim() });
-        return;
-      }
-    }
-    (current || group({ type: "card", field: "other" })).values.push(line);
-  });
-  var count = 0;
-  groups.forEach(function(g){ count += g.values.length; });
-  return { name: title || (lines[0] || "").trim().slice(0, 60), groups: groups, count: count };
-}
-function cnBirthday(v){
-  var m = String(v).match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{2,4})?/);
-  if (!m || !m[3]) return "";
-  var y = Number(m[3]);
-  if (y < 100) y += y > new Date().getFullYear() % 100 ? 1900 : 2000;
-  return y + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
-}
-/* Überträgt eine zerlegte Notiz in eine (neue oder vorhandene) Person */
-function cnApply(person, parsed, newCats){
-  var card = cardOf(person);
-  function addText(field, v){ card[field] = card[field] ? card[field] + (field === "other" || field === "address" ? "\n" : ", ") + v : v; }
-  function pushNote(list, v, flags){
-    var pt = parsePoint(v);
-    if (!pt.title) return;
-    var exists = list.some(function(n){ return normLabel(n.title) === normLabel(pt.title) && normLabel(n.desc) === normLabel(pt.desc); });
-    if (exists) return;
-    var n = { id: uid(), title: pt.title, desc: pt.desc, url: pt.url, imgs: [] };
-    if (flags && flags.neg) n.neg = true;
-    if (flags && flags.review) { n.review = true; n.suggest = foodGuess(pt.title); }
-    list.push(n);
-  }
-  function tick(cat, sub){
-    var e = editableEntry(person, cat.id);
-    if (e.subs.indexOf(sub.id) === -1) e.subs.push(sub.id);
-    cat.hidden = false;
-  }
-  parsed.groups.forEach(function(g){
-    var t = g.target;
-    if (t.type === "newcat") {
-      var key = normLabel(t.name);
-      if (!newCats[key]) {
-        newCats[key] = { id: uid(), name: t.name, kind: "", ranked: false, detail: false, hidden: false, subs: [] };
-        state.categories.push(newCats[key]);
-      }
-      t = { type: "cat", cat: newCats[key] };
-    }
-    if (t.type === "card") {
-      g.values.forEach(function(v){
-        if (t.field === "birthday") {
-          var iso = cnBirthday(v);
-          if (iso && !card.birthday) card.birthday = iso;
-          else { if (!card.extra) card.extra = []; card.extra.push({ id: uid(), label: "Geburtstag", value: v }); }
-        } else addText(t.field, v);
-      });
-      return;
-    }
-    var cat = t.cat;
-    if (!g.values.length && t.type !== "sub") return;
-    cat.hidden = false;
-    if (t.type === "sub") {
-      tick(cat, t.sub);
-      g.values.forEach(function(v){
-        var e = editableEntry(person, cat.id);
-        if (hasDetail(cat)) { if (!e.subNotes[t.sub.id]) e.subNotes[t.sub.id] = []; pushNote(e.subNotes[t.sub.id], v); }
-        else pushNote(e.notes, v);
-      });
-      return;
-    }
-    g.values.forEach(function(v){
-      var sub = cat.subs.filter(function(x){ return normLabel(x.name) === normLabel(v); })[0];
-      if (sub && !t.neg && !t.review) tick(cat, sub); else pushNote(editableEntry(person, cat.id).notes, v, t);
-    });
-  });
-}
-
-/* Ablauf: Datei wählen → Passwort → Auswahl der Notizen → Übernahme */
-function colorNoteImport(){
-  var f = h("input", { type: "file" });
-  f.style.display = "none";
-  f.addEventListener("change", function(){
-    var file = f.files && f.files[0];
-    f.remove();
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(){ colorNotePassword(new Uint8Array(reader.result)); };
-    reader.onerror = function(){ toast("Die Datei konnte nicht gelesen werden"); };
-    reader.readAsArrayBuffer(file);
-  });
-  document.body.appendChild(f);
-  f.click();
-}
-function colorNotePassword(bytes){
-  var pw = h("input", { class: "field", type: "password", id: "cnPw", autocomplete: "off" });
-  var d = h("dialog", null);
-  function close(){ d.remove(); }
-  d.appendChild(h("form", { onsubmit: function(ev){
-      ev.preventDefault();
-      colorNoteDecrypt(bytes, pw.value).then(function(text){
-        var notes = jsonObjects(text).filter(function(n){
-          return n && typeof n === "object" && "note" in n && n.type !== 128 && n.type !== 256 && n.active_state !== 16 && n.active_state !== 32;
-        });
-        if (!notes.length) { toast("In dieser Datei wurden keine Notizen gefunden"); return; }
-        close();
-        colorNotePreview(notes);
-      }, function(){ toast("Das Passwort passt nicht, oder das ist kein ColorNote-Backup"); pw.select(); });
-    } },
-    h("h3", { text: "ColorNote-Backup öffnen" }),
-    h("p", { class: "small", text: "Gib das Passwort ein, das du beim Erstellen des Backups in ColorNote vergeben hast. Hast du keins vergeben, probiere 0000." }),
-    h("label", { for: "cnPw", text: "Passwort" }), pw,
-    h("div", { class: "row" },
-      h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }),
-      h("button", { class: "btn primary", type: "submit", text: "Öffnen" }))));
-  d.addEventListener("close", close);
-  document.body.appendChild(d); showDialog(d);
-  pw.focus();
-}
-function colorNotePreview(notes){
-  var locked = notes.filter(function(n){ return n.encrypted && n.encrypted !== 0; }).length;
-  var items = notes.filter(function(n){ return !n.encrypted; }).map(function(n){ return { parsed: cnParse(n), on: true }; })
-    .filter(function(x){ return x.parsed.name; });
-  items.sort(function(a, b){ return a.parsed.name.localeCompare(b.parsed.name, "de", { sensitivity: "base" }); });
-  var d = h("dialog", null), list = h("ul", { class: "cnlist" });
-  function close(){ d.remove(); }
-  var goBtn = h("button", { class: "btn primary", type: "button" });
-  function count(){ var n = items.filter(function(x){ return x.on; }).length; goBtn.textContent = n + (n === 1 ? " Person übernehmen" : " Personen übernehmen"); goBtn.disabled = !n; }
-  items.forEach(function(x){
-    var existing = state.people.filter(function(p){ return normLabel(p.name) === normLabel(x.parsed.name); })[0];
-    var box = h("input", { type: "checkbox" });
-    box.checked = true;
-    box.addEventListener("change", function(){ x.on = box.checked; count(); });
-    list.appendChild(h("li", null, h("label", null, box, h("span", null,
-      h("span", { class: "cnname", text: x.parsed.name }),
-      h("span", { class: "cnmeta", text: (x.parsed.count === 1 ? "1 Eintrag" : x.parsed.count + " Einträge") + (existing ? ", wird bei der vorhandenen Person ergänzt" : ", neue Person") })))));
-  });
-  count();
-  goBtn.addEventListener("click", function(){
-    var newCats = {}, added = 0, merged = 0, lastId = null;
-    items.forEach(function(x){
-      if (!x.on) return;
-      var p = state.people.filter(function(q){ return normLabel(q.name) === normLabel(x.parsed.name); })[0];
-      if (p) merged++;
-      else { p = { id: uid(), name: x.parsed.name, photo: "", card: cleanCard(null), updated: Date.now(), entries: {} }; state.people.push(p); added++; }
-      cnApply(p, x.parsed, newCats);
-      p.updated = Date.now();
-      lastId = p.id;
-    });
-    saveNow(); close(); go("people");
-    var nc = Object.keys(newCats).length;
-    toast((added ? added + " neu" : "") + (added && merged ? ", " : "") + (merged ? merged + " ergänzt" : "") + (nc ? ", " + nc + (nc === 1 ? " neue Kategorie" : " neue Kategorien") : ""));
-  });
-  d.appendChild(h("h3", { text: "Aus ColorNote übernehmen" }));
-  d.appendChild(h("p", { class: "small", text: "Jede Notiz wird zu einer Person, ihr Titel zum Namen. Zeilen wie „Kuchen: Käsekuchen“ oder eine Überschrift „Geschenkideen:“ mit Einträgen darunter landen in der passenden Kategorie; was keiner Kategorie zugeordnet werden kann, steht danach in der Visitenkarte unter „Sonstiges“." }));
-  if (locked) d.appendChild(h("p", { class: "muted small", text: (locked === 1 ? "1 gesperrte Notiz kann" : locked + " gesperrte Notizen können") + " nicht gelesen werden und " + (locked === 1 ? "wird" : "werden") + " übersprungen." }));
-  d.appendChild(list);
-  d.appendChild(h("div", { class: "row" }, h("button", { class: "btn", type: "button", text: "Abbrechen", onclick: close }), goBtn));
-  d.addEventListener("close", close);
-  document.body.appendChild(d); showDialog(d);
 }
 
 /* ---------- Prüfliste: Einträge aus „Mag“/„Mag nicht“ einsortieren ---------- */
