@@ -336,7 +336,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "18.10.2026 (3)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "20.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -2189,6 +2189,10 @@ navButtons.forEach(function(b){
 /* Zurück-Taste des Handys: Jede Ansicht außer der Personenliste bekommt einen Eintrag im Verlauf.
    „Zurück“ schließt erst einen offenen Dialog, dann geht es zur Personenliste, erst dort verlässt man die App. */
 var inSubview = false, skipPop = false;
+var cardPushed = false;   // offene Visitenkarte hat einen eigenen Eintrag im Verlauf
+var cardCloser = null;    // schließt die gerade angezeigte Visitenkarte
+function pushCard(){ try { history.pushState({ merkbuch: 2 }, ""); cardPushed = true; } catch (e) {} }
+function dropCard(){ if (!cardPushed) return; cardPushed = false; skipPop = true; try { history.back(); } catch (e) { skipPop = false; } }
 function enterSub(){
   if (inSubview) return;
   try { history.pushState({ merkbuch: 1 }, ""); inSubview = true; } catch (e) {}
@@ -2203,6 +2207,13 @@ function closeTopDialog(){
 }
 window.addEventListener("popstate", function(){
   if (skipPop) { skipPop = false; return; }
+  // Visitenkarte offen: erst einen Dialog darüber schließen, sonst die Karte
+  if (cardPushed) {
+    cardPushed = false;
+    if (closeTopDialog()) { pushCard(); return; }
+    if (cardCloser) cardCloser();
+    return;
+  }
   var hadSub = inSubview;
   inSubview = false;
   if (closeTopDialog()) { if (hadSub) enterSub(); return; }   // nur den Dialog schließen, in der Ansicht bleiben
@@ -2210,10 +2221,13 @@ window.addEventListener("popstate", function(){
 });
 
 function go(v, personId, fromPop){
+  cardOpen = {}; cardCloser = null;   // beim Wechseln der Ansicht ist die Visitenkarte zu
   if (!fromPop) {
-    if (v === "people") {
-      if (inSubview) { inSubview = false; skipPop = true; try { history.back(); } catch (e) { skipPop = false; } }
-    } else enterSub();
+    var steps = cardPushed ? 1 : 0;
+    cardPushed = false;
+    if (v === "people" && inSubview) { inSubview = false; steps++; }
+    if (steps) { skipPop = true; try { history.go(-steps); } catch (e) { skipPop = false; } }
+    if (v !== "people") enterSub();
   }
   flushPending();
   if (saveTimer) saveNow();
@@ -2684,11 +2698,16 @@ function renderPerson(){
   var cardBtn = h("button", { class: "btn icon", type: "button", icon: CARD_ICON, "aria-label": "Visitenkarte", title: "Visitenkarte",
     "aria-expanded": cardOpen[p.id] ? "true" : "false", "aria-controls": "vcard",
     onclick: function(){
-      cardOpen[p.id] = !cardOpen[p.id];
-      vcard.hidden = !cardOpen[p.id];
-      cardBtn.setAttribute("aria-expanded", cardOpen[p.id] ? "true" : "false");
-      if (cardOpen[p.id]) vcard.querySelectorAll("textarea").forEach(grow);
+      setCard(!cardOpen[p.id]);
+      if (cardOpen[p.id]) pushCard(); else dropCard();
     } });
+  function setCard(open){
+    cardOpen[p.id] = open;
+    vcard.hidden = !open;
+    cardBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) vcard.querySelectorAll("textarea").forEach(grow);
+  }
+  cardCloser = function(){ setCard(false); };
 
   var name = h("input", { class: "field namefield", type: "text", value: p.name, placeholder: "Name", "aria-label": "Name", autocomplete: "off",
     oninput: function(){ p.name = name.value; saveSoon(); } });
