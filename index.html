@@ -275,6 +275,7 @@ dialog.pointdlg .qtop .field{margin-bottom:6px}
 .point.dragging{opacity:.3}
 .dragghost{position:fixed;z-index:1000;margin:0;pointer-events:none;list-style:none;opacity:.95;transform:scale(1.03);box-shadow:0 10px 28px rgba(0,0,0,.28);border-radius:12px;background:var(--surface)}
 .card.droptarget{outline:3px solid var(--accent);outline-offset:2px}
+[data-negzone].droptarget{outline:3px solid #C0263B;outline-offset:4px;border-radius:12px}
 body.notedrag{-webkit-user-select:none;user-select:none}
 .suggest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .suggest .chip{min-height:40px;padding:4px 12px;font-size:.95rem;background:var(--surface)}
@@ -334,7 +335,7 @@ dialog .row .btn{white-space:normal}
 
 /* ---------- Daten ---------- */
 var KEY = "merkbuch.v1";
-var APP_VERSION = "21.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
+var APP_VERSION = "22.10.2026 (1)";   // steht unten in den Einstellungen; zeigt, ob ein Update angekommen ist
 var STANDALONE = !(window.claude && typeof window.claude.use === "function");   // als eigene App, nicht innerhalb von Claude
 
 /* Merkt sich, wann zuletzt ein Backup gespeichert wurde, und seit wann die App benutzt wird */
@@ -1379,7 +1380,7 @@ function notesBlock(read, write, placeholder, label, suggest, gift, dislikes){
         } }));
   }
   var archive = gift ? h("div", { class: "archive" }) : null;
-  var negBox = h("div");
+  var negBox = h("div", dislikes ? { "data-negzone": "1" } : null);
   function drawAll(){
     list.textContent = "";
     negBox.textContent = "";
@@ -1445,7 +1446,23 @@ function dragNote(li, n, write){
   function cancelTimer(){ clearTimeout(timer); timer = null; }
   function targetAt(x, y){
     var el = document.elementFromPoint(x, y);
-    return el && el.closest ? el.closest("[data-cat]") : null;
+    if (!el || !el.closest) return null;
+    var zone = el.closest("[data-negzone]"), card = el.closest("[data-cat]");
+    if (!card) return null;
+    var t = zone && card.contains(zone) ? zone : card;
+    var drop = dropInfo(t);
+    return drop && drop.changes ? t : null;
+  }
+  // wohin die Notiz käme: Kategorie und ob „mag nicht“
+  function dropInfo(t){
+    var card = t.closest("[data-cat]");
+    var p = state.people.filter(function(x){ return x.id === currentPersonId; })[0];
+    var cat = card && state.categories.filter(function(c){ return c.id === card.getAttribute("data-cat"); })[0];
+    if (!p || !cat) return null;
+    var inZone = t.hasAttribute("data-negzone");
+    var same = editableEntry(p, cat.id).notes === write();
+    var neg = same ? inZone : (inZone || (!!n.neg && !!cat.dislikes));
+    return { p: p, cat: cat, same: same, neg: neg, changes: !same || neg !== !!n.neg };
   }
   function mark(t){
     if (t === target) return;
@@ -1493,18 +1510,20 @@ function dragNote(li, n, write){
     document.body.classList.remove("notedrag");
     dragEndedAt = Date.now();
     if (!dropIt || !t) return;
-    var p = state.people.filter(function(x){ return x.id === currentPersonId; })[0];
-    var cat = state.categories.filter(function(c){ return c.id === t.getAttribute("data-cat"); })[0];
-    if (!p || !cat) return;
-    var src = write(), dst = editableEntry(p, cat.id).notes;
-    if (src === dst) return;
-    var at = src.indexOf(n);
-    if (at === -1) return;
-    src.splice(at, 1);
-    dst.push(n);
+    var drop = dropInfo(t);
+    if (!drop || !drop.changes) return;
+    var cat = drop.cat;
+    if (!drop.same) {
+      var src = write(), dst = editableEntry(drop.p, cat.id).notes, at = src.indexOf(n);
+      if (at === -1) return;
+      src.splice(at, 1);
+      dst.push(n);
+    }
+    if (drop.neg) n.neg = true; else delete n.neg;
     delete n.review; delete n.suggest;
     saveNow(); render();
-    toast("„" + n.title + "“ nach „" + catName(cat) + "“ verschoben");
+    toast(drop.same ? "„" + n.title + "“ " + (drop.neg ? "zu „Mag nicht“ verschoben" : "zu „Mag“ verschoben")
+      : "„" + n.title + "“ nach „" + catName(cat) + (drop.neg ? " – Mag nicht" : "") + "“ verschoben");
   }
   function startAt(x, y, target0){
     if (target0.closest("a, .btn")) return false;
@@ -2735,7 +2754,7 @@ function renderPerson(){
       : "Noch nichts eingetragen. Tippe unten rechts auf den Stift, um alle Kategorien zu sehen." }));
   } else if (editMode) {
     app.appendChild(h("p", { class: "muted small", text:
-      "Notizen: „Titel: Beschreibung“ eintippen und Enter drücken. Der Doppelpunkt trennt beides, ein eingefügter Link wird automatisch hinterlegt. Ab zwei Buchstaben erscheinen Vorschläge zum Antippen. Wo es einen Bereich „Mag nicht“ gibt, kommt ein Eintrag mit „-“ davor dorthin (z. B. „- Rosinen“). Eine Notiz gedrückt halten und ziehen verschiebt sie in eine andere Kategorie." }));
+      "Notizen: „Titel: Beschreibung“ eintippen und Enter drücken. Der Doppelpunkt trennt beides, ein eingefügter Link wird automatisch hinterlegt. Ab zwei Buchstaben erscheinen Vorschläge zum Antippen. Wo es einen Bereich „Mag nicht“ gibt, kommt ein Eintrag mit „-“ davor dorthin (z. B. „- Rosinen“). Eine Notiz gedrückt halten und ziehen verschiebt sie in eine andere Kategorie oder zwischen „Mag“ und „Mag nicht“." }));
   }
 
   // Kategorien einer Gruppe (z. B. Essen & Trinken) stehen zusammen unter einer Überschrift
